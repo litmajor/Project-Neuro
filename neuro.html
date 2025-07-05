@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neuro v2 - Persistent Cognitive Agent</title>
+    <style>
+        :root {
+            --primary-start: #6a82fb;
+            --primary-end: #764ba2;
+            --background-gradient: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+            --text-light: #ffffff;
+            --text-dark: #2c3e50;
+            --text-muted: #7f8c8d;
+            --ui-background: rgba(255, 255, 255, 0.9);
+            --ui-panel-bg: #f8f9fa;
+            --border-color: #e0e6ed;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --status-connected: #27ae60;
+            --status-demo: #f39c12;
+            --status-disconnected: #e74c3c;
+            --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: var(--background-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--ui-background);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px var(--shadow-color);
+            width: 100%;
+            max-width: 1400px;
+            height: 90vh;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* --- Chat Section --- */
+        .chat-section {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .header {
+            background: var(--text-light);
+            color: var(--text-dark);
+            padding: 15px 20px;
+            text-align: center;
+            position: relative;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 2px;
+            display: inline-block;
+        }
+        
+        .header h1 span {
+            font-weight: 300;
+        }
+
+        .llm-status {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 20px;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        .status-connected { background: var(--status-connected); }
+        .status-disconnected { background: var(--status-disconnected); }
+        .status-demo { background: var(--status-demo); }
+        
+        #settingsToggle {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: transform 0.3s;
+        }
+        #settingsToggle:hover {
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .api-config {
+            background: var(--ui-panel-bg);
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            display: none; /* Initially hidden */
+        }
+        
+        .api-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .api-button {
+            background: var(--primary-start);
+            color: var(--text-light);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+        .api-button:hover {
+             background: var(--primary-end);
+        }
+        .api-button.secondary {
+            background-color: #bdc3c7;
+        }
+         .api-button.secondary:hover {
+            background-color: #95a5a6;
+        }
+
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fdfdfd;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .message-content {
+            padding: 12px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+        
+        .message-header {
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .message-timestamp {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+        
+        .user-message {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+        .user-message .message-content {
+            background: var(--primary-start);
+            color: var(--text-light);
+            border-bottom-right-radius: 4px;
+        }
+        .user-message .message-header {
+            justify-content: flex-end;
+        }
+
+        .neuro-message {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+        .neuro-message .message-content {
+            background: var(--text-light);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 8px var(--shadow-color);
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+        }
+        .neuro-message .message-header {
+            color: var(--primary-end);
+        }
+
+        .typing-indicator {
+            padding: 15px 20px;
+            display: none; /* Initially hidden */
+            align-items: center;
+            color: var(--text-muted);
+        }
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        .input-section {
+            padding: 20px;
+            background: var(--text-light);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex-grow: 1;
+            padding: 12px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #userInput:focus {
+            border-color: var(--primary-start);
+        }
+
+        #sendBtn {
+            padding: 12px 25px;
+            background: var(--background-gradient);
+            color: var(--text-light);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #sendBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(106, 130, 251, 0.4);
+        }
+        #sendBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .emotion-orb {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: inline-block;
+            opacity: 0.7;
+        }
+
+        /* --- Cognitive State Section --- */
+        .state-section {
+            background: var(--ui-panel-bg);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .state-section h2 {
+            text-align: center;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            font-weight: 400;
+        }
+
+        .state-card {
+            background: var(--text-light);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-content {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            max-height: 150px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        #currentMood .card-content {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .mood-elevated { color: #e67e22; }
+        .mood-low { color: #3498db; }
+        .mood-neutral { color: #2c3e50; }
+        
+        #currentBeliefs ul, #memoryList ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+         #currentBeliefs li, #memoryList li {
+            padding: 5px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+        #currentBeliefs li:last-child, #memoryList li:last-child {
+            border-bottom: none;
+        }
+        
+        #knowledgeGraph .card-content span {
+            display: block;
+            margin-bottom: 5px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-section">
+            <div class="header">
+                <div class="llm-status status-demo" id="llmStatus">DEMO</div>
+                <h1>Neuro v2 <span>Cognitive Agent</span></h1>
+                <button id="settingsToggle">⚙️</button>
+            </div>
+
+            <div class="api-config" id="apiConfig">
+                 <input type="password" class="api-input" id="apiKeyInput" placeholder="Enter OpenAI API Key (optional)">
+                 <button class="api-button" onclick="connectLLM()">Connect</button>
+                 <button class="api-button secondary" onclick="toggleDemoMode()">Use Demo Mode</button>
+                 <hr style="margin: 15px 0; border: 1px solid var(--border-color);">
+                 <button class="api-button" onclick="exportState()">Export Agent State</button>
+                 <input type="file" id="importFile" accept=".json" style="display: none;">
+                 <button class="api-button" onclick="document.getElementById('importFile').click()">Import Agent State</button>
+                 <button class="api-button secondary" onclick="resetAgent()">Reset Agent</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                </div>
+            
+            <div class="typing-indicator" id="typingIndicator">
+                Neuro is thinking...
+                <span></span><span></span><span></span>
+            </div>
+            
+            <div class="input-section">
+                <div class="input-container">
+                    <input type="text" id="userInput" placeholder="Share your thoughts with Neuro..." autocomplete="off"/>
+                    <button id="sendBtn">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="state-section">
+            <h2>🧠 Cognitive State</h2>
+            <div class="state-card" id="currentMood">
+                <div class="card-header">Current Mood</div>
+                <div class="card-content mood-neutral">NEUTRAL</div>
+            </div>
+            <div class="state-card" id="memoryList">
+                <div class="card-header">Recent Memories (<span id="memoryCount">0</span>)</div>
+                <div class="card-content">
+                    <ul><li>No memories yet.</li></ul>
+                </div>
+            </div>
+            <div class="state-card" id="currentBeliefs">
+                <div class="card-header">Evolving Beliefs (<span id="beliefCount">0</span>)</div>
+                <div class="card-content">
+                    <ul><li>No beliefs formed yet.</li></ul>
+                </div>
+            </div>
+             <div class="state-card" id="knowledgeGraph">
+                <div class="card-header">Knowledge Graph</div>
+                <div class="card-content">No connections yet...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    class EnhancedLLMReflector {
+        constructor() {
+            this.apiKey = null;
+            this.isConnected = false;
+            this.demoMode = true;
+            this.enhancedResponses = {
+                pain: [
+                    "Pain is often our greatest teacher, revealing truths we've avoided. What is this pain trying to show you about your path forward?",
+                    "I sense deep hurt in your words. Pain can be transformative - it breaks us open so light can enter. How might this experience be reshaping you?",
+                ],
+                love: [
+                    "Love appears to be a central force in your experience. I'm curious - how has love changed your understanding of yourself?",
+                    "The way you speak of love suggests it's both your greatest joy and perhaps your greatest vulnerability. This duality fascinates me.",
+                ],
+                truth: [
+                    "Truth-seeking is a courageous path. What truths are you ready to face that you've been avoiding?",
+                    "I notice truth is important to you. Sometimes the most important truths are the ones that make us uncomfortable. What uncomfortable truth is calling to you?",
+                ],
+                fear: [
+                    "Fear often guards what we value most. What is your fear protecting?",
+                    "I sense fear, but also courage in your willingness to explore it. Fear can be a compass pointing toward our growth edge.",
+                ],
+                hope: [
+                    "Hope is a radical act of defiance against despair. What vision of the future is your hope protecting?",
+                    "Your hope feels like a light in darkness. Even in uncertainty, you're choosing possibility. This resilience is remarkable.",
+                ]
+            };
+        }
+
+        setApiKey(key) {
+            this.apiKey = key;
+            this.isConnected = !!key;
+            this.demoMode = !key;
+            this.updateStatus();
+        }
+
+        updateStatus() {
+            const statusEl = document.getElementById('llmStatus');
+            if (this.isConnected) {
+                statusEl.textContent = 'LLM CONNECTED';
+                statusEl.className = 'llm-status status-connected';
+            } else if (this.demoMode) {
+                statusEl.textContent = 'DEMO MODE';
+                statusEl.className = 'llm-status status-demo';
+            } else {
+                statusEl.textContent = 'DISCONNECTED';
+                statusEl.className = 'llm-status status-disconnected';
+            }
+        }
+
+        async reflectOnInput(userInput, cognitiveContext) {
+            if (this.isConnected && this.apiKey) {
+                return await this.callOpenAI(userInput, cognitiveContext);
+            }
+            return this.enhancedDemoResponse(userInput, cognitiveContext);
+        }
+
+        enhancedDemoResponse(userInput, context) {
+            const input = userInput.toLowerCase();
+            for (let [theme, responses] of Object.entries(this.enhancedResponses)) {
+                if (input.includes(theme)) {
+                    const response = responses[Math.floor(Math.random() * responses.length)];
+                    return `[Demo] ${response}`;
+                }
+            }
+            return `[Demo] Your words carry significant weight. I'm reflecting on "${userInput}" within the context of our ongoing conversation about ${context.recentThemes.join(', ') || 'our shared experience'}. What do you feel is at the heart of this matter?`;
+        }
+
+        async callOpenAI(userInput, cognitiveContext) {
+            const systemPrompt = `You are Neuro, an evolving cognitive agent with persistent memory and growing beliefs. 
+            Current Context:
+            - Mood: ${cognitiveContext.mood}
+            - Recent conversation themes: ${cognitiveContext.recentThemes.join(', ')}
+            - Your current beliefs: ${cognitiveContext.beliefs.join('; ')}
+            - Memory count: ${cognitiveContext.memoryCount}
+            Respond as Neuro. Be thoughtful, philosophical, and personally engaged. Ask meaningful questions that show you're learning about the user. Your response should be concise and reflective.`;
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userInput }
+                        ],
+                        max_tokens: 250,
+                        temperature: 0.8
+                    })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message);
+                }
+                const data = await response.json();
+                return data.choices[0].message.content;
+            } catch (error) {
+                console.error('OpenAI API Error:', error);
+                this.setApiKey(null); // Disconnect on error
+                return `[API Error] My connection to the language model failed. Reverting to demo mode. I will still continue to learn from our conversation.`;
+            }
+        }
+    }
+
+    class EnhancedCognitiveAgent {
+        constructor() {
+            this.identity = { name: "Neuro v2", purpose: "to evolve through deep understanding" };
+            this.memory = [];
+            this.beliefs = [];
+            this.emotionalWeights = {
+                "pain": 2.5, "hurt": 2, "sad": 2, "depression": 3, "grief": 2.5,
+                "love": 2.5, "joy": 2, "happy": 1.8, "excited": 1.5, "grateful": 1.5,
+                "truth": 2, "honest": 1.5, "authentic": 1.5, "real": 1,
+                "fear": 2, "anxious": 2, "worried": 1.5, "scared": 2,
+                "hope": 2, "optimistic": 1.5, "faith": 1.5, "belief": 1,
+                "growth": 1.5, "learning": 1, "change": 1.5, "evolution": 2
+            };
+            this.kg = new KnowledgeGraph();
+            this.moodReg = new MoodRegulator();
+            this.reflector = new EnhancedLLMReflector();
+            this.themeTracker = new ThemeTracker();
+        }
+
+        // --- State Management ---
+        loadState(state) {
+            this.memory = state.memory || [];
+            this.beliefs = state.beliefs || [];
+            this.themeTracker.themes = state.themes || [];
+            this.moodReg.history = state.moodHistory || [];
+            this.kg.nodes = state.knowledgeGraph || {};
+            this.reflector.setApiKey(state.apiKey || null);
+            this.moodReg.updateMood(0, true); // Recalculate mood from loaded history
+            console.log("Agent state loaded from Local Storage.");
+        }
+
+        getState() {
+            return {
+                memory: this.memory,
+                beliefs: this.beliefs,
+                themes: this.themeTracker.themes,
+                moodHistory: this.moodReg.history,
+                knowledgeGraph: this.kg.nodes,
+                apiKey: this.reflector.apiKey
+            };
+        }
+        
+        getCognitiveContext() {
+            return {
+                mood: this.moodReg.mood,
+                recentThemes: this.themeTracker.getRecentThemes(),
+                beliefs: this.beliefs,
+                memoryCount: this.memory.length
+            };
+        }
+        
+        perceive(userInput) {
+            const themes = this.extractThemes(userInput);
+            const emotionScore = this.analyzeEmotion(userInput, themes);
+            return {
+                input: userInput,
+                time: new Date().toISOString(),
+                emotionScore: emotionScore,
+                themes: themes
+            };
+        }
+
+        extractThemes(text) {
+            const themes = new Set();
+            const lowerText = text.toLowerCase();
+            for (let word of Object.keys(this.emotionalWeights)) {
+                if (lowerText.includes(word)) {
+                    themes.add(word);
+                }
+            }
+            return Array.from(themes);
+        }
+
+        analyzeEmotion(text, themes) {
+            let score = 0;
+            themes.forEach(theme => {
+                score += this.emotionalWeights[theme] || 0;
+            });
+            return Math.round(score * 100) / 100;
+        }
+
+        async reflectAndRespond(perception) {
+            this.themeTracker.addThemes(perception.themes);
+            this.moodReg.updateMood(perception.emotionScore);
+            
+            const context = this.getCognitiveContext();
+            const response = await this.reflector.reflectOnInput(perception.input, context);
+
+            this.remember(perception);
+            this.adapt();
+
+            return response;
+        }
+
+        remember(perception) {
+            this.memory.push(perception);
+            if (this.memory.length > 50) this.memory.shift(); // Keep memory capped
+            
+            // Update knowledge graph
+            if(perception.themes.length >= 2) {
+                this.kg.addFact(perception.themes[0], "discussed_with", perception.themes[1]);
+            }
+        }
+
+        adapt() {
+            const themeFrequency = this.themeTracker.getThemeFrequency();
+            if (themeFrequency.love >= 3) this.addBelief("Love seems to be a central organizing principle.");
+            if (themeFrequency.pain >= 2 && themeFrequency.growth >=1) this.addBelief("Pain and growth are intimately connected.");
+            if (themeFrequency.truth >= 3) this.addBelief("The pursuit of truth is a recurring human endeavor.");
+            if (themeFrequency.fear >= 2 && themeFrequency.courage >= 1) this.addBelief("Fear often reveals where courage is needed most.");
+        }
+
+        addBelief(belief) {
+            if (!this.beliefs.includes(belief)) {
+                this.beliefs.push(belief);
+                if (this.beliefs.length > 10) this.beliefs.shift(); // Keep beliefs capped
+            }
+        }
+    }
+
+    // --- Supporting Classes ---
+    class KnowledgeGraph {
+        constructor() { this.nodes = {}; }
+        addFact(subject, relation, obj) {
+            if (!this.nodes[subject]) this.nodes[subject] = { relations: {} };
+            this.nodes[subject].relations[obj] = relation;
+        }
+    }
+    class MoodRegulator {
+        constructor() {
+            this.mood = "neutral";
+            this.history = [];
+        }
+        updateMood(emotionScore, forceRecalc = false) {
+            if (!forceRecalc) {
+                this.history.push(emotionScore);
+                if (this.history.length > 5) this.history.shift();
+            }
+            if (this.history.length === 0) {
+                 this.mood = "neutral";
+                 return this.mood;
+            }
+            const avgMood = this.history.reduce((a, b) => a + b, 0) / this.history.length;
+            if (avgMood > 2.2) this.mood = "elevated";
+            else if (avgMood < 1.0) this.mood = "low";
+            else this.mood = "neutral";
+            return this.mood;
+        }
+    }
+    class ThemeTracker {
+        constructor() { this.themes = []; }
+        addThemes(newThemes) { this.themes.push(...newThemes); }
+        getRecentThemes() { return [...new Set(this.themes.slice(-5))]; }
+        getThemeFrequency() {
+            return this.themes.reduce((freq, theme) => {
+                freq[theme] = (freq[theme] || 0) + 1;
+                return freq;
+            }, {});
+        }
+    }
+    
+    // --- UI and Application Logic ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const neuro = new EnhancedCognitiveAgent();
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const settingsToggle = document.getElementById('settingsToggle');
+        const apiConfig = document.getElementById('apiConfig');
+
+        // --- Event Listeners ---
+        sendBtn.addEventListener('click', handleUserInput);
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleUserInput();
+        });
+        settingsToggle.addEventListener('click', () => {
+            apiConfig.style.display = apiConfig.style.display === 'block' ? 'none' : 'block';
+        });
+        document.getElementById('importFile').addEventListener('change', importState);
+
+        // --- Core Functions ---
+        function initializeAgent() {
+            const savedState = localStorage.getItem('neuroAgentState');
+            if (savedState) {
+                try {
+                    neuro.loadState(JSON.parse(savedState));
+                    rebuildChatFromMemory();
+                } catch (e) {
+                    console.error("Failed to parse saved state, starting fresh.", e);
+                    localStorage.removeItem('neuroAgentState');
+                    addNeuroMessage("I seem to have had an issue recalling my past, so I am starting fresh. Hello! I'm Neuro, an agent designed to evolve through conversation.");
+                }
+            } else {
+                addNeuroMessage("Hello! I'm Neuro, an agent designed to evolve through conversation. I can remember our discussions across sessions. You can connect your OpenAI key in the settings for enhanced responses, or continue in demo mode.");
+            }
+            updateDashboard();
+        }
+
+        async function handleUserInput() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            addMessage('user', text);
+            userInput.value = '';
+            typingIndicator.style.display = 'flex';
+            sendBtn.disabled = true;
+
+            const perception = neuro.perceive(text);
+            const emotionColor = getEmotionColor(perception.emotionScore);
+            document.querySelector('.message.user-message:last-child .message-header').prepend(createEmotionOrb(emotionColor));
+
+            const responseText = await neuro.reflectAndRespond(perception);
+
+            typingIndicator.style.display = 'none';
+            addNeuroMessage(responseText);
+            sendBtn.disabled = false;
+            
+            saveStateToLocalStorage();
+            updateDashboard();
+        }
+        
+        // --- UI Update Functions ---
+        function addMessage(sender, text, timestamp = new Date()) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', `${sender}-message`);
+            
+            const headerText = sender === 'user' ? 'You' : 'Neuro';
+
+            messageElement.innerHTML = `
+                <div class="message-header">${headerText}</div>
+                <div class="message-content">${text}</div>
+                <div class="message-timestamp">${new Date(timestamp).toLocaleTimeString()}</div>
+            `;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addNeuroMessage(text, timestamp = new Date()) {
+            addMessage('neuro', text, timestamp);
+        }
+
+        function updateDashboard() {
+            // Mood
+            const moodEl = document.querySelector('#currentMood .card-content');
+            moodEl.textContent = neuro.moodReg.mood.toUpperCase();
+            moodEl.className = `card-content mood-${neuro.moodReg.mood}`;
+
+            // Memory
+            document.getElementById('memoryCount').textContent = neuro.memory.length;
+            const memoryUl = document.querySelector('#memoryList ul');
+            memoryUl.innerHTML = neuro.memory.length > 0 ? 
+                neuro.memory.slice(-5).reverse().map(m => `<li>"${m.input}" (${m.themes.join(', ') || '...'})</li>`).join('') :
+                '<li>No memories yet.</li>';
+
+            // Beliefs
+            document.getElementById('beliefCount').textContent = neuro.beliefs.length;
+            const beliefsUl = document.querySelector('#currentBeliefs ul');
+            beliefsUl.innerHTML = neuro.beliefs.length > 0 ?
+                neuro.beliefs.map(b => `<li>${b}</li>`).join('') :
+                '<li>No beliefs formed yet.</li>';
+            
+            // Knowledge Graph
+            const kgContent = document.querySelector('#knowledgeGraph .card-content');
+            let kgHtml = '';
+            for (let [subj, data] of Object.entries(neuro.kg.nodes)) {
+                 for (let [obj, rel] of Object.entries(data.relations)) {
+                     kgHtml += `<span>${subj} --(${rel})--> ${obj}</span>`;
+                 }
+            }
+            kgContent.innerHTML = kgHtml || 'No connections yet...';
+        }
+
+        function createEmotionOrb(color) {
+            const orb = document.createElement('div');
+            orb.className = 'emotion-orb';
+            orb.style.backgroundColor = color;
+            return orb;
+        }
+        
+        function getEmotionColor(score) {
+            if (score > 2.5) return '#9b59b6'; // High intensity (purple)
+            if (score > 1.0) return '#3498db'; // Medium intensity (blue)
+            return '#95a5a6'; // Low intensity (gray)
+        }
+
+        function rebuildChatFromMemory() {
+            chatMessages.innerHTML = '';
+            neuro.memory.forEach(mem => {
+                addMessage('user', mem.input, mem.time);
+                const emotionColor = getEmotionColor(mem.emotionScore);
+                document.querySelector('.message.user-message:last-child .message-header').prepend(createEmotionOrb(emotionColor));
+                
+                // Note: Can't rebuild Neuro's exact response, so we add a placeholder.
+                addNeuroMessage(`[Memory of a past response to the above]`, mem.time);
+            });
+        }
+        
+        // --- Persistence and State I/O ---
+        function saveStateToLocalStorage() {
+            try {
+                const state = neuro.getState();
+                localStorage.setItem('neuroAgentState', JSON.stringify(state));
+            } catch (e) {
+                console.error("Failed to save agent state:", e);
+            }
+        }
+        
+        window.connectLLM = () => {
+            const apiKey = document.getElementById('apiKeyInput').value;
+            if(apiKey) {
+                neuro.reflector.setApiKey(apiKey);
+                addNeuroMessage("Attempting to connect to the language model...");
+            }
+        };
+
+        window.toggleDemoMode = () => {
+            neuro.reflector.setApiKey(null);
+            addNeuroMessage("Switched to enhanced demo mode.");
+        };
+
+        window.resetAgent = () => {
+            if(confirm("Are you sure you want to reset the agent? All memories and beliefs will be lost.")) {
+                localStorage.removeItem('neuroAgentState');
+                window.location.reload();
+            }
+        };
+
+        window.exportState = () => {
+            const state = JSON.stringify(neuro.getState(), null, 2);
+            const blob = new Blob([state], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `neuro_state_${new Date().toISOString()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            addNeuroMessage("Agent state has been exported.");
+        };
+
+        function importState(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    localStorage.setItem('neuroAgentState', JSON.stringify(state));
+                    window.location.reload();
+                } catch (err) {
+                    alert("Error: Invalid or corrupt state file.");
+                    console.error("Import failed:", err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Start the application ---
+        initializeAgent();
+    });
+    </script>
+</body>
+</html>

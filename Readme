@@ -1,0 +1,53 @@
+[Neuro v2 - Persistent Cognitive Agent]
+Neuro v2 is an interactive web-based chatbot designed to simulate an evolving, AI-powered cognitive agent. It engages in deep, reflective conversations, remembers past interactions across browser sessions, and evolves a unique set of "beliefs" based on the dialogue. The agent can operate in a local "Demo Mode" or connect to OpenAI's GPT-4 for enhanced conversational capabilities.
+
+✨ Features
+Persistent Memory: Neuro v2 saves its entire cognitive state (memories, beliefs, mood) to the browser's local storage. You can close the tab and resume your conversation later.
+
+Dual-Mode Operation:
+
+Demo Mode: Uses a sophisticated set of built-in, context-aware responses without requiring any external services.
+
+LLM-Connected Mode: Allows users to input their own OpenAI API key to unlock dynamic, generative responses from GPT-4.
+
+Evolving Personality: The agent analyzes conversational themes to form new "beliefs," which subtly influence its perspective and future responses.
+
+Cognitive State Dashboard: A real-time dashboard provides a transparent look into the agent's "mind," displaying its current mood, recent memories, and evolving beliefs.
+
+Emotional Analysis: The agent assigns an emotional score to user input, which is visualized in the chat and influences its internal mood (e.g., neutral, elevated, low).
+
+Import/Export State: Users can download the agent's complete memory as a JSON file for backup or sharing, and upload a file to restore a previous state.
+
+Modern, Responsive UI: The interface is clean, modern, and designed for a seamless user experience, featuring a typing indicator, message timestamps, and a collapsible settings panel.
+
+🚀 How to Use
+Running the Application: Simply open the index.html file in any modern web browser (like Chrome, Firefox, or Edge). No web server is needed.
+
+Starting a Conversation: Type a message in the input box and press "Send" or Enter. You can start conversing immediately in Demo Mode.
+
+Connecting to an LLM (Optional):
+
+Click the settings icon (⚙️) in the top-right corner.
+
+Enter your OpenAI API key into the input field.
+
+Click "Connect". The status indicator will change to "LLM CONNECTED".
+
+Managing the Agent: Use the buttons in the settings panel to Export or Import the agent's state, or to Reset its memory and start over.
+
+🛠️ Technical Breakdown
+The project is built with vanilla HTML, CSS, and JavaScript, with no external dependencies. The core logic is encapsulated within several JavaScript classes:
+
+EnhancedCognitiveAgent: The main class that orchestrates the agent's functions. It handles perception, reflection, memory, and adaptation.
+
+EnhancedLLMReflector: Manages the connection to the OpenAI API and generates both LLM-powered and demo responses.
+
+Supporting Classes:
+
+MoodRegulator: Tracks and adjusts the agent's internal mood based on conversation.
+
+ThemeTracker: Identifies and records the frequency of key themes.
+
+KnowledgeGraph: Forms simple relationships between concepts discussed.
+
+Persistence: The agent's state is serialized to JSON and saved to localStorage after each interaction, and loaded upon page initialization.
