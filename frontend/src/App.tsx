@@ -81,7 +81,7 @@ const AppContent: React.FC = () => {
   // WebSocket connection for real-time updates
   useEffect(() => {
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const apiBase = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5173', ':8000');
+    const apiBase = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5000', ':8000');
     const wsUrl = `ws://${apiBase}/ws/${clientId}`;
 
     const connectWebSocket = () => {
@@ -173,7 +173,7 @@ const AppContent: React.FC = () => {
     currentStreamingMessage.current = '';
 
     try {
-      const apiBase = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5173', ':8000');
+      const apiBase = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5000', ':8000');
       const response = await fetch(`http://${apiBase}/api/chat/stream`, {
         method: 'POST',
         headers: {

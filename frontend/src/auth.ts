@@ -16,7 +16,7 @@ export interface AuthToken {
   user: User;
 }
 
-const API_BASE = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5173', ':8000');
+const API_BASE = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5000', ':8000');
 
 export class AuthService {
   private token: string | null = null;
