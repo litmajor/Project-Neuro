@@ -517,9 +517,7 @@ app.add_middleware(
         "http://localhost:5173", 
         "http://localhost:5000", 
         "https://ed54fe6e-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev",
-        "https://8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev",
-        "https://*.replit.dev", 
-        "https://*.replit.app"
+        "https://8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],

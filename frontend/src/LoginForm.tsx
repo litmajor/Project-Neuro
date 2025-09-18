@@ -154,7 +154,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`</style>
+      <style jsx global>{`
         @keyframes fadeInScale {
           from {
             opacity: 0.8;

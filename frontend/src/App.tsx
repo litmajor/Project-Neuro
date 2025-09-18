@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Brain, 
-  Send, 
-  Settings, 
+import {
+  Brain,
+  Send,
+  Settings,
   Activity,
   Heart,
   Zap,
@@ -87,7 +87,7 @@ const AppContent: React.FC = () => {
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const isLocal = window.location.hostname === 'localhost';
     const host = window.location.host;
-    const backendHost = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
+    const backendHost = isLocal ? 'localhost:8000' : '8000-' + host.split('-').slice(1).join('-');
     const wsProtocol = isLocal ? 'ws' : 'wss';
     const wsUrl = `${wsProtocol}://${backendHost}/ws/${clientId}`;
 
@@ -197,7 +197,7 @@ const AppContent: React.FC = () => {
     try {
       const isLocal = window.location.hostname === 'localhost';
       const host = window.location.host;
-      const backendHost = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
+      const backendHost = isLocal ? 'localhost:8000' : '8000-' + host.split('-').slice(1).join('-');
       const protocol = isLocal ? 'http' : 'https';
       const response = await fetch(`${protocol}://${backendHost}/api/chat/stream`, {
         method: 'POST',
@@ -240,8 +240,8 @@ const AppContent: React.FC = () => {
                 currentStreamingMessage.current += data.content;
 
                 // Update the streaming message
-                setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessageId 
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMessageId
                     ? { ...msg, content: currentStreamingMessage.current }
                     : msg
                 ));
@@ -249,8 +249,8 @@ const AppContent: React.FC = () => {
                 setCognitiveState(data.state);
               } else if (data.type === 'complete') {
                 // Mark streaming as complete
-                setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessageId 
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMessageId
                     ? { ...msg, isStreaming: false }
                     : msg
                 ));
@@ -268,12 +268,12 @@ const AppContent: React.FC = () => {
       console.error('Error sending message:', error);
 
       // Update message with error
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessageId 
-          ? { 
-              ...msg, 
+      setMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? {
+              ...msg,
               content: `❌ ${error.message}`,
-              isStreaming: false 
+              isStreaming: false
             }
           : msg
       ));
@@ -354,12 +354,12 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`min-h-screen transition-colors font-sans ${
-      theme === 'light' 
-        ? 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 text-gray-900' 
+      theme === 'light'
+        ? 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 text-gray-900'
         : 'bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white'
     }`}>
       {/* Header */}
-      <motion.header 
+      <motion.header
         className={`backdrop-blur-md border-b p-4 ${
           theme === 'light'
             ? 'bg-white/80 border-gray-200'
@@ -373,11 +373,11 @@ const AppContent: React.FC = () => {
           <div className="flex items-center space-x-3">
             <motion.div
               className="p-2 bg-blue-500/20 rounded-lg"
-              animate={{ 
+              animate={{
                 scale: [1, 1.05, 1],
                 rotate: [0, 5, -5, 0]
               }}
-              transition={{ 
+              transition={{
                 duration: 4,
                 repeat: Infinity,
                 ease: "easeInOut"
@@ -419,10 +419,10 @@ const AppContent: React.FC = () => {
             <ThemeToggle />
 
             {/* Connection Status */}
-            <motion.div 
+            <motion.div
               className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ${
-                isConnected 
-                  ? 'bg-green-500/20 text-green-400' 
+                isConnected
+                  ? 'bg-green-500/20 text-green-400'
                   : 'bg-red-500/20 text-red-400'
               }`}
               animate={{ opacity: [0.7, 1, 0.7] }}
@@ -476,14 +476,14 @@ const AppContent: React.FC = () => {
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-2xl ${
-                    message.role === 'user' 
-                      ? 'bg-blue-500/20 border border-blue-500/30' 
+                    message.role === 'user'
+                      ? 'bg-blue-500/20 border border-blue-500/30'
                       : 'bg-white/10 border border-white/20'
                   } rounded-2xl p-4 backdrop-blur-md`}>
                     <div className="flex items-center space-x-2 mb-2">
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                        message.role === 'user' 
-                          ? 'bg-blue-500 text-white' 
+                        message.role === 'user'
+                          ? 'bg-blue-500 text-white'
                           : 'bg-purple-500 text-white'
                       }`}>
                         {message.role === 'user' ? 'U' : 'N'}
@@ -525,7 +525,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Input Area */}
-          <motion.div 
+          <motion.div
             className={`p-4 md:p-6 backdrop-blur-md border-t ${
               theme === 'light'
                 ? 'bg-gray-50/80 border-gray-200'
@@ -581,7 +581,7 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Cognitive State Sidebar */}
-        <motion.div 
+        <motion.div
           className={`${
             sidebarOpen ? 'translate-x-0' : 'translate-x-full'
           } fixed md:relative md:translate-x-0 top-0 right-0 w-80 h-full backdrop-blur-md border-l p-4 md:p-6 overflow-y-auto z-50 transition-transform ${
@@ -599,7 +599,7 @@ const AppContent: React.FC = () => {
           </h2>
 
           {/* Mood Display */}
-          <motion.div 
+          <motion.div
             className="bg-white/10 rounded-xl p-4 mb-6"
             whileHover={{ scale: 1.02 }}
           >
@@ -616,7 +616,7 @@ const AppContent: React.FC = () => {
           </motion.div>
 
           {/* Energy Level */}
-          <motion.div 
+          <motion.div
             className="bg-white/10 rounded-xl p-4 mb-6"
             whileHover={{ scale: 1.02 }}
           >
@@ -626,7 +626,7 @@ const AppContent: React.FC = () => {
             </h3>
             <div className="relative">
               <div className="w-full bg-white/20 rounded-full h-3">
-                <motion.div 
+                <motion.div
                   className="bg-gradient-to-r from-yellow-400 to-orange-400 h-3 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${cognitiveState.energy_level * 100}%` }}
@@ -640,7 +640,7 @@ const AppContent: React.FC = () => {
           </motion.div>
 
           {/* Focus Areas */}
-          <motion.div 
+          <motion.div
             className="bg-white/10 rounded-xl p-4 mb-6"
             whileHover={{ scale: 1.02 }}
           >
@@ -668,7 +668,7 @@ const AppContent: React.FC = () => {
           </motion.div>
 
           {/* Memory Count */}
-          <motion.div 
+          <motion.div
             className="bg-white/10 rounded-xl p-4 mb-6"
             whileHover={{ scale: 1.02 }}
           >
@@ -685,7 +685,7 @@ const AppContent: React.FC = () => {
           </motion.div>
 
           {/* Beliefs */}
-          <motion.div 
+          <motion.div
             className="bg-white/10 rounded-xl p-4"
             whileHover={{ scale: 1.02 }}
           >
