@@ -118,7 +118,7 @@ class ResponseCache:
         self.access_times = {}
         self.max_size = max_size
         self.ttl = ttl
-    
+
     def _cleanup(self):
         """Remove expired entries"""
         current_time = time.time()
@@ -129,14 +129,14 @@ class ResponseCache:
         for key in expired_keys:
             self.cache.pop(key, None)
             self.access_times.pop(key, None)
-    
+
     def get(self, key: str):
         self._cleanup()
         if key in self.cache:
             self.access_times[key] = time.time()
             return self.cache[key]
         return None
-    
+
     def set(self, key: str, value):
         self._cleanup()
         if len(self.cache) >= self.max_size:
@@ -144,7 +144,7 @@ class ResponseCache:
             oldest_key = min(self.access_times.keys(), key=self.access_times.get)
             self.cache.pop(oldest_key, None)
             self.access_times.pop(oldest_key, None)
-        
+
         self.cache[key] = value
         self.access_times[key] = time.time()
 
@@ -158,12 +158,12 @@ def cache_response(ttl: int = 300):
         async def wrapper(*args, **kwargs):
             # Create cache key from function name and arguments
             cache_key = f"{func.__name__}:{hashlib.md5(str(args + tuple(kwargs.items())).encode()).hexdigest()}"
-            
+
             # Check cache first
             cached_result = response_cache.get(cache_key)
             if cached_result is not None:
                 return cached_result
-            
+
             # Execute function and cache result
             result = await func(*args, **kwargs)
             response_cache.set(cache_key, result)
@@ -173,7 +173,7 @@ def cache_response(ttl: int = 300):
 
 class DatabaseOptimizer:
     """Database query optimization utilities"""
-    
+
     @staticmethod
     def get_conversation_with_messages_optimized(db: Session, conversation_id: int, user_id: int, limit: int = 50):
         """Optimized query to get conversation with messages"""
@@ -189,7 +189,7 @@ class DatabaseOptimizer:
             """),
             {"conversation_id": conversation_id, "user_id": user_id, "limit": limit}
         ).fetchall()
-    
+
     @staticmethod
     def get_user_memories_optimized(db: Session, user_id: int, limit: int = 20):
         """Optimized query for user memories"""
@@ -203,7 +203,7 @@ class DatabaseOptimizer:
             """),
             {"user_id": user_id, "limit": limit}
         ).fetchall()
-    
+
     @staticmethod
     def get_user_preferences_grouped(db: Session, user_id: int):
         """Optimized query for grouped user preferences"""
@@ -513,12 +513,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Configure CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", 
-        "http://localhost:5000", 
-        "https://ed54fe6e-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev",
-        "https://8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev"
-    ],
+    allow_origins=["*"], # Changed to allow all origins
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -573,13 +568,13 @@ async def performance_metrics(
         "cache_hit_ratio": len(response_cache.cache) / max(1, response_cache.max_size),
         "cache_ttl": response_cache.ttl
     }
-    
+
     # Database connection stats
     db_stats = {
         "active_connections": len(ws_manager.active_connections),
-        "database_type": "sqlite" if DATABASE_URL.startswith("sqlite") else "postgresql"
+        "database_type": "sqlite" if os.getenv("DATABASE_URL", "").startswith("sqlite") else "postgresql"
     }
-    
+
     # User-specific metrics
     user_stats = db.execute(
         text("""
@@ -591,7 +586,7 @@ async def performance_metrics(
         """),
         {"user_id": current_user.id}
     ).fetchone()
-    
+
     return {
         "cache": cache_stats,
         "database": db_stats,
@@ -626,7 +621,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     """Login user"""
     logger.info(f"Login attempt for username: {user_data.username}")
-    
+
     try:
         user = authenticate_user(db, user_data.username, user_data.password)
         if not user:
@@ -714,10 +709,10 @@ async def get_conversation(
     results = db_optimizer.get_conversation_with_messages_optimized(
         db, conversation_id, current_user.id, limit=100
     )
-    
+
     if not results:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
+
     # Process results
     first_row = results[0]
     conversation_data = {
@@ -727,7 +722,7 @@ async def get_conversation(
         "updated_at": first_row.updated_at,
         "messages": []
     }
-    
+
     # Process messages
     for row in results:
         if row.message_id:  # Skip if no messages
@@ -738,7 +733,7 @@ async def get_conversation(
                 "timestamp": row.timestamp,
                 "cognitive_state": json.loads(row.cognitive_state) if row.cognitive_state else {}
             })
-    
+
     return conversation_data
 
 @app.get("/api/memories")
@@ -772,16 +767,16 @@ async def get_user_preferences(
     try:
         # Use optimized grouped query
         results = db_optimizer.get_user_preferences_grouped(db, current_user.id)
-        
+
         grouped_prefs = {}
         for row in results:
             grouped_prefs[row.preference_type] = json.loads(row.preferences)
-        
+
         return grouped_prefs
     except Exception as e:
         # Fallback to original query for SQLite compatibility
         from database import UserPreference
-        
+
         preferences = db.query(UserPreference).filter(
             UserPreference.user_id == current_user.id
         ).order_by(UserPreference.confidence_score.desc()).all()
@@ -963,18 +958,18 @@ async def stream_chat(
             full_response = ""
             token_buffer = ""
             buffer_size = 5  # Buffer tokens for smoother streaming
-            
+
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     content = chunk.choices[0].delta.content
                     full_response += content
                     token_buffer += content
-                    
+
                     # Send buffered tokens for smoother streaming
                     if len(token_buffer) >= buffer_size or '\n' in token_buffer:
                         yield f"data: {json.dumps({'type': 'token', 'content': token_buffer})}\n\n"
                         token_buffer = ""
-            
+
             # Send any remaining buffered content
             if token_buffer:
                 yield f"data: {json.dumps({'type': 'token', 'content': token_buffer})}\n\n"

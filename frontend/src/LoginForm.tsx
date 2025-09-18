@@ -154,7 +154,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
         </div>
       </div>
 
-      <style>{`</style>
       <style jsx global>{`
         @keyframes fadeInScale {
           from {

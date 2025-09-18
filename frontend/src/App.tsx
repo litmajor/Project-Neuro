@@ -87,7 +87,7 @@ const AppContent: React.FC = () => {
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const isLocal = window.location.hostname === 'localhost';
     const host = window.location.host;
-    const backendHost = isLocal ? 'localhost:8000' : '8000-' + host.split('-').slice(1).join('-');
+    const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
     const wsProtocol = isLocal ? 'ws' : 'wss';
     const wsUrl = `${wsProtocol}://${backendHost}/ws/${clientId}`;
 
@@ -197,7 +197,7 @@ const AppContent: React.FC = () => {
     try {
       const isLocal = window.location.hostname === 'localhost';
       const host = window.location.host;
-      const backendHost = isLocal ? 'localhost:8000' : '8000-' + host.split('-').slice(1).join('-');
+      const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
       const protocol = isLocal ? 'http' : 'https';
       const response = await fetch(`${protocol}://${backendHost}/api/chat/stream`, {
         method: 'POST',
