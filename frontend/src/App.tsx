@@ -10,9 +10,13 @@ import {
   Heart,
   Zap,
   MessageCircle,
-  Sparkles
+  Sparkles,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import './App.css';
+import { useAuth } from './auth';
+import { LoginForm } from './LoginForm';
 
 // Types for our advanced cognitive agent
 interface Message {
@@ -39,6 +43,8 @@ interface WebSocketMessage {
 }
 
 const App: React.FC = () => {
+  const { user, isAuthenticated, login, register, logout, updatePersonality } = useAuth();
+  
   // State management
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -54,6 +60,7 @@ const App: React.FC = () => {
     beliefs: []
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [conversations, setConversations] = useState<any[]>([]);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -160,6 +167,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(isAuthenticated ? { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` } : {})
         },
         body: JSON.stringify({
           message: userMessage.content,
@@ -263,6 +271,11 @@ const App: React.FC = () => {
     }
   };
 
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={login} onRegister={register} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white font-sans">
       {/* Header */}
@@ -297,6 +310,12 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* User Info */}
+            <div className="flex items-center space-x-2 text-sm">
+              <UserIcon className="w-4 h-4 text-blue-400" />
+              <span className="text-gray-300">Welcome, {user?.username}</span>
+            </div>
+
             {/* Connection Status */}
             <motion.div 
               className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ${
@@ -321,6 +340,16 @@ const App: React.FC = () => {
               whileTap={{ scale: 0.95 }}
             >
               <Settings className="w-5 h-5" />
+            </motion.button>
+
+            {/* Logout Button */}
+            <motion.button
+              className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+              onClick={logout}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <LogOut className="w-5 h-5" />
             </motion.button>
           </div>
         </div>
