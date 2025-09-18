@@ -54,7 +54,7 @@ const App: React.FC = () => {
     beliefs: []
   });
   const [showSettings, setShowSettings] = useState(false);
-  
+
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -64,25 +64,25 @@ const App: React.FC = () => {
   useEffect(() => {
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const wsUrl = `ws://localhost:8000/ws/${clientId}`;
-    
+
     const connectWebSocket = () => {
       try {
         wsRef.current = new WebSocket(wsUrl);
-        
+
         wsRef.current.onopen = () => {
           console.log('🔗 WebSocket connected');
           setIsConnected(true);
-          
+
           // Send initial ping
           if (wsRef.current) {
             wsRef.current.send(JSON.stringify({ type: 'ping' }));
           }
         };
-        
+
         wsRef.current.onmessage = (event) => {
           try {
             const data: WebSocketMessage = JSON.parse(event.data);
-            
+
             if (data.type === 'cognitive_update' || data.type === 'cognitive_state') {
               if (data.state) {
                 setCognitiveState(data.state);
@@ -92,15 +92,15 @@ const App: React.FC = () => {
             console.error('Error parsing WebSocket message:', error);
           }
         };
-        
+
         wsRef.current.onclose = () => {
           console.log('🔌 WebSocket disconnected');
           setIsConnected(false);
-          
+
           // Reconnect after 3 seconds
           setTimeout(connectWebSocket, 3000);
         };
-        
+
         wsRef.current.onerror = (error) => {
           console.error('❌ WebSocket error:', error);
           setIsConnected(false);
@@ -110,9 +110,9 @@ const App: React.FC = () => {
         setTimeout(connectWebSocket, 3000);
       }
     };
-    
+
     connectWebSocket();
-    
+
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
@@ -128,18 +128,18 @@ const App: React.FC = () => {
   // Send message to AI with streaming response
   const sendMessage = async () => {
     if (!inputValue.trim() || isStreaming) return;
-    
+
     const userMessage: Message = {
       id: `msg_${Date.now()}`,
       role: 'user',
       content: inputValue.trim(),
       timestamp: new Date()
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsStreaming(true);
-    
+
     // Create streaming assistant message
     const assistantMessageId = `msg_${Date.now() + 1}`;
     const assistantMessage: Message = {
@@ -149,10 +149,10 @@ const App: React.FC = () => {
       timestamp: new Date(),
       isStreaming: true
     };
-    
+
     setMessages(prev => [...prev, assistantMessage]);
     currentStreamingMessage.current = '';
-    
+
     try {
       const response = await fetch('http://localhost:8000/api/chat/stream', {
         method: 'POST',
@@ -165,33 +165,33 @@ const App: React.FC = () => {
           cognitive_context: cognitiveState
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to get AI response');
       }
-      
+
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('No response stream available');
       }
-      
+
       const decoder = new TextDecoder();
-      
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
-        
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              
+
               if (data.type === 'token') {
                 currentStreamingMessage.current += data.content;
-                
+
                 // Update the streaming message
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
@@ -219,7 +219,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      
+
       // Update message with error
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessageId 
@@ -293,7 +293,7 @@ const App: React.FC = () => {
               <p className="text-sm text-gray-400">Advanced Cognitive Agent</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {/* Connection Status */}
             <motion.div 
@@ -310,7 +310,7 @@ const App: React.FC = () => {
               }`} />
               {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
             </motion.div>
-            
+
             {/* Settings Button */}
             <motion.button
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -397,7 +397,7 @@ const App: React.FC = () => {
               >
                 {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
               </motion.button>
-              
+
               <div className="flex-1 relative">
                 <textarea
                   value={inputValue}
@@ -409,7 +409,7 @@ const App: React.FC = () => {
                   disabled={isStreaming}
                 />
               </div>
-              
+
               <motion.button
                 onClick={sendMessage}
                 disabled={!inputValue.trim() || isStreaming}
@@ -429,7 +429,7 @@ const App: React.FC = () => {
                 )}
               </motion.button>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Cognitive State Sidebar */}
