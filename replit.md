@@ -1,43 +1,59 @@
-# Neuro v2 - Persistent Cognitive Agent
+# Neuro v3 - Advanced Cognitive Agent
 
 ## Overview
-Neuro v2 is an interactive web-based chatbot that simulates an evolving, AI-powered cognitive agent. It engages in deep, reflective conversations, remembers past interactions across browser sessions, and evolves a unique set of "beliefs" based on dialogue.
+Neuro v3 is a sophisticated full-stack application featuring a React frontend and FastAPI backend that implements an advanced AI cognitive agent. The system provides real-time AI interactions, user authentication, file uploads, collaborative conversations, and comprehensive cognitive state tracking.
 
 ## Current State
 - Successfully imported and configured for Replit environment
-- Web server running on port 5000 serving static HTML application
-- Deployment configured for autoscale production use
-- No external dependencies required - pure vanilla HTML/CSS/JavaScript
+- React frontend running on port 5000 with Vite dev server
+- FastAPI backend running on port 8000 with real-time WebSocket support
+- PostgreSQL database configured and connected
+- Deployment configured for VM production use
+- All dependencies installed and configured
 
 ## Project Architecture
-- **Single Page Application**: Built with vanilla HTML, CSS, and JavaScript
-- **Static File Serving**: Uses Python's built-in HTTP server
-- **Client-side Logic**: All functionality runs in the browser
-- **Local Storage**: Persistent state saved in browser's localStorage
-- **Dual Mode Operation**: 
-  - Demo mode with built-in responses (default)
-  - Optional OpenAI API integration for dynamic responses
+- **Frontend**: React 19 with TypeScript, Vite, TailwindCSS, Framer Motion
+- **Backend**: FastAPI with Python 3.11, SQLAlchemy, WebSockets, OpenAI integration
+- **Database**: PostgreSQL with comprehensive user, conversation, and memory models
+- **Real-time Features**: WebSocket connections for live cognitive state updates
+- **Authentication**: JWT-based user authentication with password hashing
+- **File System**: Advanced file upload and analysis capabilities
 
 ## Features
-- Persistent memory across browser sessions
-- Evolving personality and beliefs system
-- Emotional analysis and mood tracking
-- Real-time cognitive state dashboard
-- Import/export functionality for agent state
-- Modern, responsive UI with typing indicators
+- User registration and authentication system
+- Real-time AI chat with streaming responses
+- Advanced cognitive state tracking and personality adaptation
+- User preference learning and personalized responses
+- File upload with AI-powered analysis
+- Shared conversations and collaboration features
+- Message reactions and interactive UI elements
+- Voice features for speech input/output
+- Theme switching (light/dark mode)
+- Mobile-responsive design
 
 ## Technical Details
-- **Frontend**: Vanilla HTML/CSS/JavaScript (no frameworks)
-- **Server**: Python HTTP server (development and production)
-- **Port**: 5000 (configured for Replit proxy)
-- **Host**: 0.0.0.0 (allows proxy access)
-- **Deployment**: Autoscale (suitable for stateless web app)
+- **Frontend**: React + TypeScript + Vite on port 5000
+- **Backend**: FastAPI + SQLAlchemy on port 8000
+- **Database**: PostgreSQL with environment variables configured
+- **Host Configuration**: 0.0.0.0 for frontend, localhost for backend
+- **Deployment**: VM deployment with both services running concurrently
+- **WebSockets**: Real-time connection for cognitive state synchronization
 
 ## Recent Changes
-- September 18, 2025: Initial import and Replit environment setup
-- Created index.html copy of neuro.html for root access
-- Configured web server workflow for development
-- Set up deployment configuration for production
+- September 18, 2025: Complete GitHub import and Replit environment setup
+- Installed all Python and Node.js dependencies
+- Fixed Vite configuration for Replit proxy compatibility
+- Updated WebSocket and API host configuration for port changes
+- Fixed TailwindCSS PostCSS configuration issues
+- Configured PostgreSQL database with all required tables
+- Set up development workflows for both frontend and backend
+- Configured production deployment settings
 
 ## User Preferences
 - No specific preferences documented yet
+
+## Notes
+- OpenAI API key not configured - AI functionality will use fallback responses
+- WebSocket connections tested and working on backend
+- Frontend successfully displays login interface and is ready for use
+- All core functionality is operational and ready for development
