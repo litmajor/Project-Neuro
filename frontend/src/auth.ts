@@ -16,7 +16,10 @@ export interface AuthToken {
   user: User;
 }
 
-const API_BASE = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5000', ':8000');
+const isLocal = window.location.hostname === 'localhost';
+const host = window.location.host;
+const API_BASE = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
+const API_PROTOCOL = isLocal ? 'http' : 'https';
 
 export class AuthService {
   private token: string | null = null;
@@ -34,7 +37,7 @@ export class AuthService {
   }
 
   async register(username: string, email: string, password: string): Promise<AuthToken> {
-    const response = await fetch(`http://${API_BASE}/api/auth/register`, {
+    const response = await fetch(`${API_PROTOCOL}://${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,7 +56,7 @@ export class AuthService {
   }
 
   async login(username: string, password: string): Promise<AuthToken> {
-    const response = await fetch(`http://${API_BASE}/api/auth/login`, {
+    const response = await fetch(`${API_PROTOCOL}://${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -72,7 +75,7 @@ export class AuthService {
   }
 
   async updatePersonality(personality: Record<string, number>, mood: string, energy: number): Promise<User> {
-    const response = await fetch(`http://${API_BASE}/api/auth/personality`, {
+    const response = await fetch(`${API_PROTOCOL}://${API_BASE}/api/auth/personality`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

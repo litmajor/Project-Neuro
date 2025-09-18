@@ -81,8 +81,13 @@ const AppContent: React.FC = () => {
   // WebSocket connection for real-time updates
   useEffect(() => {
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const apiBase = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5000', ':8000');
-    const wsUrl = `ws://${apiBase}/ws/${clientId}`;
+    const isLocal = window.location.hostname === 'localhost';
+    const host = window.location.host;
+    const backendHost = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
+    const wsProtocol = isLocal ? 'ws' : 'wss';
+    const wsUrl = `${wsProtocol}://${backendHost}/ws?client_id=${clientId}`;
+    
+    console.log('🔗 WebSocket URL:', wsUrl);
 
     const connectWebSocket = () => {
       try {
@@ -173,8 +178,11 @@ const AppContent: React.FC = () => {
     currentStreamingMessage.current = '';
 
     try {
-      const apiBase = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host.replace(':5000', ':8000');
-      const response = await fetch(`http://${apiBase}/api/chat/stream`, {
+      const isLocal = window.location.hostname === 'localhost';
+      const host = window.location.host;
+      const backendHost = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
+      const protocol = isLocal ? 'http' : 'https';
+      const response = await fetch(`${protocol}://${backendHost}/api/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

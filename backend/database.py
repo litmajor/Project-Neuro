@@ -173,6 +173,7 @@ class SharedMessage(Base):
 
     id = Column(Integer, primary_key=True)
     shared_conversation_id = Column(Integer, ForeignKey('shared_conversations.id'))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     content = Column(Text, nullable=False)
     role = Column(String(50), nullable=False)  # 'user' or 'assistant'
     timestamp = Column(DateTime, default=func.now())
