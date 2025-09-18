@@ -1,0 +1,135 @@
+
+
+  VITE v7.1.6  ready in 522 ms
+
+  ➜  Local:   http://localhost:5000/
+  ➜  Network: http://172.31.90.34:5000/
+  ➜  press h + enter to show help
+11:14:26 PM [vite] (client) Pre-transform error: Transform failed with 1 error:
+/home/runner/workspace/frontend/src/LoginForm.tsx:219:7: ERROR: Multiple exports with the same name "default"
+  Plugin: vite:esbuild
+  File: /home/runner/workspace/frontend/src/LoginForm.tsx:219:0
+  
+  Multiple exports with the same name "default"
+  217 |  
+  218 |  export default LoginForm;
+  219 |  export default LoginForm;var _c;$RefreshReg$(_c, "LoginForm");
+      |         ^
+  220 |  
+  221 |  import * as RefreshRuntime from "/@react-refresh";
+  
+11:14:27 PM [vite] Internal server error: Transform failed with 1 error:
+/home/runner/workspace/frontend/src/LoginForm.tsx:219:7: ERROR: Multiple exports with the same name "default"
+  Plugin: vite:esbuild
+  File: /home/runner/workspace/frontend/src/LoginForm.tsx:219:0
+  
+  Multiple exports with the same name "default"
+  217 |  
+  218 |  export default LoginForm;
+  219 |  export default LoginForm;var _c;$RefreshReg$(_c, "LoginForm");
+      |         ^
+  220 |  
+  221 |  import * as RefreshRuntime from "/@react-refresh";
+  
+      at failureErrorWithLog (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:1467:15)
+      at /home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:736:50
+      at responseCallbacks.<computed> (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:603:9)
+      at handleIncomingPacket (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:658:12)
+      at Socket.readFromStdout (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:581:7)
+      at Socket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+11:14:28 PM [vite] Internal server error: Transform failed with 1 error:
+/home/runner/workspace/frontend/src/LoginForm.tsx:219:7: ERROR: Multiple exports with the same name "default"
+  Plugin: vite:esbuild
+  File: /home/runner/workspace/frontend/src/LoginForm.tsx:219:0
+  
+  Multiple exports with the same name "default"
+  217 |  
+  218 |  export default LoginForm;
+  219 |  export default LoginForm;var _c;$RefreshReg$(_c, "LoginForm");
+      |         ^
+  220 |  
+  221 |  import * as RefreshRuntime from "/@react-refresh";
+  
+      at failureErrorWithLog (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:1467:15)
+      at /home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:736:50
+      at responseCallbacks.<computed> (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:603:9)
+      at handleIncomingPacket (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:658:12)
+      at Socket.readFromStdout (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:581:7)
+      at Socket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:191:23) (x2)
+11:14:41 PM [vite] Internal server error: Transform failed with 1 error:
+/home/runner/workspace/frontend/src/LoginForm.tsx:219:7: ERROR: Multiple exports with the same name "default"
+  Plugin: vite:esbuild
+  File: /home/runner/workspace/frontend/src/LoginForm.tsx:219:0
+  
+  Multiple exports with the same name "default"
+  217 |  
+  218 |  export default LoginForm;
+  219 |  export default LoginForm;var _c;$RefreshReg$(_c, "LoginForm");
+      |         ^
+  220 |  
+  221 |  import * as RefreshRuntime from "/@react-refresh";
+  
+      at failureErrorWithLog (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:1467:15)
+      at /home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:736:50
+      at responseCallbacks.<computed> (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:603:9)
+      at handleIncomingPacket (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:658:12)
+      at Socket.readFromStdout (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:581:7)
+      at Socket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:191:23) (x3)
+11:15:04 PM [vite] Internal server error: Transform failed with 1 error:
+/home/runner/workspace/frontend/src/LoginForm.tsx:219:7: ERROR: Multiple exports with the same name "default"
+  Plugin: vite:esbuild
+  File: /home/runner/workspace/frontend/src/LoginForm.tsx:219:0
+  
+  Multiple exports with the same name "default"
+  217 |  
+  218 |  export default LoginForm;
+  219 |  export default LoginForm;var _c;$RefreshReg$(_c, "LoginForm");
+      |         ^
+  220 |  
+  221 |  import * as RefreshRuntime from "/@react-refresh";
+  
+      at failureErrorWithLog (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:1467:15)
+      at /home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:736:50
+      at responseCallbacks.<computed> (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:603:9)
+      at handleIncomingPacket (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:658:12)
+      at Socket.readFromStdout (/home/runner/workspace/frontend/node_modules/esbuild/lib/main.js:581:7)
+      at Socket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:191:23) (x4)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
