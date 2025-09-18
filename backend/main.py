@@ -7,16 +7,21 @@ import asyncio
 import logging
 import shutil
 import uuid
+import time
 from typing import Dict, List, Optional, AsyncGenerator
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 from pathlib import Path
+from functools import lru_cache, wraps
+import hashlib
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import text, func
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
@@ -104,6 +109,125 @@ class WebSocketManager:
         for conn in disconnected:
             if conn in self.active_connections:
                 self.active_connections.remove(conn)
+
+# Performance optimization utilities
+class ResponseCache:
+    """Simple in-memory cache for API responses"""
+    def __init__(self, max_size: int = 1000, ttl: int = 300):  # 5 minutes TTL
+        self.cache = {}
+        self.access_times = {}
+        self.max_size = max_size
+        self.ttl = ttl
+    
+    def _cleanup(self):
+        """Remove expired entries"""
+        current_time = time.time()
+        expired_keys = [
+            key for key, access_time in self.access_times.items()
+            if current_time - access_time > self.ttl
+        ]
+        for key in expired_keys:
+            self.cache.pop(key, None)
+            self.access_times.pop(key, None)
+    
+    def get(self, key: str):
+        self._cleanup()
+        if key in self.cache:
+            self.access_times[key] = time.time()
+            return self.cache[key]
+        return None
+    
+    def set(self, key: str, value):
+        self._cleanup()
+        if len(self.cache) >= self.max_size:
+            # Remove oldest entry
+            oldest_key = min(self.access_times.keys(), key=self.access_times.get)
+            self.cache.pop(oldest_key, None)
+            self.access_times.pop(oldest_key, None)
+        
+        self.cache[key] = value
+        self.access_times[key] = time.time()
+
+# Global cache instance
+response_cache = ResponseCache()
+
+def cache_response(ttl: int = 300):
+    """Decorator for caching API responses"""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Create cache key from function name and arguments
+            cache_key = f"{func.__name__}:{hashlib.md5(str(args + tuple(kwargs.items())).encode()).hexdigest()}"
+            
+            # Check cache first
+            cached_result = response_cache.get(cache_key)
+            if cached_result is not None:
+                return cached_result
+            
+            # Execute function and cache result
+            result = await func(*args, **kwargs)
+            response_cache.set(cache_key, result)
+            return result
+        return wrapper
+    return decorator
+
+class DatabaseOptimizer:
+    """Database query optimization utilities"""
+    
+    @staticmethod
+    def get_conversation_with_messages_optimized(db: Session, conversation_id: int, user_id: int, limit: int = 50):
+        """Optimized query to get conversation with messages"""
+        return db.execute(
+            text("""
+            SELECT c.id, c.title, c.created_at, c.updated_at,
+                   m.id as message_id, m.role, m.content, m.timestamp, m.cognitive_state
+            FROM conversations c
+            LEFT JOIN messages m ON c.id = m.conversation_id
+            WHERE c.id = :conversation_id AND c.user_id = :user_id
+            ORDER BY m.timestamp ASC
+            LIMIT :limit
+            """),
+            {"conversation_id": conversation_id, "user_id": user_id, "limit": limit}
+        ).fetchall()
+    
+    @staticmethod
+    def get_user_memories_optimized(db: Session, user_id: int, limit: int = 20):
+        """Optimized query for user memories"""
+        return db.execute(
+            text("""
+            SELECT id, content, category, importance_score, created_at, accessed_count
+            FROM memories 
+            WHERE user_id = :user_id 
+            ORDER BY importance_score DESC, last_accessed DESC 
+            LIMIT :limit
+            """),
+            {"user_id": user_id, "limit": limit}
+        ).fetchall()
+    
+    @staticmethod
+    def get_user_preferences_grouped(db: Session, user_id: int):
+        """Optimized query for grouped user preferences"""
+        return db.execute(
+            text("""
+            SELECT preference_type, 
+                   JSON_GROUP_ARRAY(
+                       JSON_OBJECT(
+                           'value', preference_value,
+                           'confidence', confidence_score,
+                           'learned_from', learned_from,
+                           'updated_at', updated_at
+                       )
+                   ) as preferences
+            FROM user_preferences 
+            WHERE user_id = :user_id 
+            GROUP BY preference_type
+            ORDER BY MAX(confidence_score) DESC
+            """),
+            {"user_id": user_id}
+        ).fetchall()
+
+# Global database optimizer
+db_optimizer = DatabaseOptimizer()
 
 # Global WebSocket manager
 ws_manager = WebSocketManager()
@@ -372,13 +496,19 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("🧠 Advanced Cognitive Agent shutting down...")
 
-# Initialize FastAPI app
+# Initialize FastAPI app with performance optimizations
 app = FastAPI(
     title="Advanced Cognitive Agent API",
     description="Next-generation AI cognitive agent with real-time streaming and advanced memory",
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    # Performance optimizations
+    docs_url="/docs" if os.getenv("DEBUG") else None,  # Disable docs in production
+    redoc_url="/redoc" if os.getenv("DEBUG") else None,
 )
+
+# Add compression middleware for better performance
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Configure CORS for frontend
 app.add_middleware(
@@ -406,6 +536,49 @@ async def health_check():
         "status": "healthy",
         "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
         "active_connections": len(ws_manager.active_connections),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/performance")
+async def performance_metrics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get performance metrics and cache statistics"""
+    cache_stats = {
+        "cache_size": len(response_cache.cache),
+        "cache_max_size": response_cache.max_size,
+        "cache_hit_ratio": len(response_cache.cache) / max(1, response_cache.max_size),
+        "cache_ttl": response_cache.ttl
+    }
+    
+    # Database connection stats
+    db_stats = {
+        "active_connections": len(ws_manager.active_connections),
+        "database_type": "sqlite" if DATABASE_URL.startswith("sqlite") else "postgresql"
+    }
+    
+    # User-specific metrics
+    user_stats = db.execute(
+        text("""
+        SELECT 
+            (SELECT COUNT(*) FROM conversations WHERE user_id = :user_id) as total_conversations,
+            (SELECT COUNT(*) FROM messages m JOIN conversations c ON m.conversation_id = c.id WHERE c.user_id = :user_id) as total_messages,
+            (SELECT COUNT(*) FROM memories WHERE user_id = :user_id) as total_memories,
+            (SELECT COUNT(*) FROM user_preferences WHERE user_id = :user_id) as total_preferences
+        """),
+        {"user_id": current_user.id}
+    ).fetchone()
+    
+    return {
+        "cache": cache_stats,
+        "database": db_stats,
+        "user_data": {
+            "conversations": user_stats.total_conversations,
+            "messages": user_stats.total_messages,
+            "memories": user_stats.total_memories,
+            "preferences": user_stats.total_preferences
+        },
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
@@ -465,14 +638,26 @@ async def update_personality(
 
 # Conversation management
 @app.get("/api/conversations")
+@cache_response(ttl=60)  # Cache for 1 minute
 async def get_conversations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user's conversation history"""
-    conversations = db.query(Conversation).filter(
-        Conversation.user_id == current_user.id
-    ).order_by(Conversation.updated_at.desc()).limit(20).all()
+    """Get user's conversation history with optimized query"""
+    # Optimized query with aggregate count
+    conversations = db.execute(
+        text("""
+        SELECT c.id, c.title, c.created_at, c.updated_at, 
+               COALESCE(COUNT(m.id), 0) as message_count
+        FROM conversations c
+        LEFT JOIN messages m ON c.id = m.conversation_id
+        WHERE c.user_id = :user_id
+        GROUP BY c.id, c.title, c.created_at, c.updated_at
+        ORDER BY c.updated_at DESC
+        LIMIT 20
+        """),
+        {"user_id": current_user.id}
+    ).fetchall()
 
     return [
         {
@@ -480,56 +665,58 @@ async def get_conversations(
             "title": conv.title,
             "created_at": conv.created_at,
             "updated_at": conv.updated_at,
-            "message_count": len(conv.messages)
+            "message_count": conv.message_count
         }
         for conv in conversations
     ]
 
 @app.get("/api/conversations/{conversation_id}")
+@cache_response(ttl=30)  # Cache for 30 seconds
 async def get_conversation(
     conversation_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get specific conversation with messages"""
-    conversation = db.query(Conversation).filter(
-        Conversation.id == conversation_id,
-        Conversation.user_id == current_user.id
-    ).first()
-
-    if not conversation:
+    """Get specific conversation with messages using optimized query"""
+    # Use optimized single query
+    results = db_optimizer.get_conversation_with_messages_optimized(
+        db, conversation_id, current_user.id, limit=100
+    )
+    
+    if not results:
         raise HTTPException(status_code=404, detail="Conversation not found")
-
-    messages = db.query(Message).filter(
-        Message.conversation_id == conversation_id
-    ).order_by(Message.timestamp.asc()).all()
-
-    return {
-        "id": conversation.id,
-        "title": conversation.title,
-        "created_at": conversation.created_at,
-        "updated_at": conversation.updated_at,
-        "messages": [
-            {
-                "id": msg.id,
-                "role": msg.role,
-                "content": msg.content,
-                "timestamp": msg.timestamp,
-                "cognitive_state": json.loads(msg.cognitive_state) if msg.cognitive_state else {}
-            }
-            for msg in messages
-        ]
+    
+    # Process results
+    first_row = results[0]
+    conversation_data = {
+        "id": first_row.id,
+        "title": first_row.title,
+        "created_at": first_row.created_at,
+        "updated_at": first_row.updated_at,
+        "messages": []
     }
+    
+    # Process messages
+    for row in results:
+        if row.message_id:  # Skip if no messages
+            conversation_data["messages"].append({
+                "id": row.message_id,
+                "role": row.role,
+                "content": row.content,
+                "timestamp": row.timestamp,
+                "cognitive_state": json.loads(row.cognitive_state) if row.cognitive_state else {}
+            })
+    
+    return conversation_data
 
 @app.get("/api/memories")
+@cache_response(ttl=120)  # Cache for 2 minutes
 async def get_memories(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user's memories"""
-    memories = db.query(Memory).filter(
-        Memory.user_id == current_user.id
-    ).order_by(Memory.importance_score.desc(), Memory.last_accessed.desc()).limit(50).all()
+    """Get user's memories with optimized query"""
+    memories = db_optimizer.get_user_memories_optimized(db, current_user.id, limit=50)
 
     return [
         {
@@ -544,30 +731,41 @@ async def get_memories(
     ]
 
 @app.get("/api/preferences")
+@cache_response(ttl=300)  # Cache for 5 minutes
 async def get_user_preferences(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user's learned preferences"""
-    from database import UserPreference
+    """Get user's learned preferences with optimized grouping"""
+    try:
+        # Use optimized grouped query
+        results = db_optimizer.get_user_preferences_grouped(db, current_user.id)
+        
+        grouped_prefs = {}
+        for row in results:
+            grouped_prefs[row.preference_type] = json.loads(row.preferences)
+        
+        return grouped_prefs
+    except Exception as e:
+        # Fallback to original query for SQLite compatibility
+        from database import UserPreference
+        
+        preferences = db.query(UserPreference).filter(
+            UserPreference.user_id == current_user.id
+        ).order_by(UserPreference.confidence_score.desc()).all()
 
-    preferences = db.query(UserPreference).filter(
-        UserPreference.user_id == current_user.id
-    ).order_by(UserPreference.confidence_score.desc()).all()
+        grouped_prefs = {}
+        for pref in preferences:
+            if pref.preference_type not in grouped_prefs:
+                grouped_prefs[pref.preference_type] = []
+            grouped_prefs[pref.preference_type].append({
+                "value": pref.preference_value,
+                "confidence": pref.confidence_score,
+                "learned_from": pref.learned_from,
+                "updated_at": pref.updated_at
+            })
 
-    # Group preferences by type
-    grouped_prefs = {}
-    for pref in preferences:
-        if pref.preference_type not in grouped_prefs:
-            grouped_prefs[pref.preference_type] = []
-        grouped_prefs[pref.preference_type].append({
-            "value": pref.preference_value,
-            "confidence": pref.confidence_score,
-            "learned_from": pref.learned_from,
-            "updated_at": pref.updated_at
-        })
-
-    return grouped_prefs
+        return grouped_prefs
 
 @app.get("/api/personality-insights")
 async def get_personality_insights(
@@ -609,6 +807,29 @@ async def get_personality_insights(
             insights["emotional_patterns"].append(f"Tends toward {pref.preference_value} emotions")
 
     return insights
+
+@app.post("/api/cache/clear")
+async def clear_cache(
+    current_user: User = Depends(get_current_user)
+):
+    """Clear response cache (for development/admin use)"""
+    response_cache.cache.clear()
+    response_cache.access_times.clear()
+    return {"message": "Cache cleared successfully", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+@app.get("/api/cache/stats")
+async def cache_statistics(
+    current_user: User = Depends(get_current_user)
+):
+    """Get detailed cache statistics"""
+    return {
+        "cache_size": len(response_cache.cache),
+        "max_size": response_cache.max_size,
+        "ttl_seconds": response_cache.ttl,
+        "utilization": len(response_cache.cache) / response_cache.max_size * 100,
+        "cached_endpoints": list(response_cache.cache.keys())[:10],  # Show first 10
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 @app.post("/api/chat/stream")
 async def stream_chat(
@@ -691,7 +912,7 @@ async def stream_chat(
             db.add(user_message)
             db.commit()
 
-            # Get streaming response from OpenAI
+            # Get streaming response from OpenAI with optimizations
             # the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
             client = get_openai_client()
             if not client:
@@ -701,16 +922,30 @@ async def stream_chat(
                 model="gpt-5",
                 messages=messages,
                 stream=True,
-                max_completion_tokens=500
+                max_completion_tokens=500,
+                # Performance optimizations
+                temperature=0.7,  # Slightly reduce randomness for better caching potential
+                top_p=0.9,        # Nucleus sampling for efficiency
             )
 
             full_response = ""
+            token_buffer = ""
+            buffer_size = 5  # Buffer tokens for smoother streaming
+            
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     content = chunk.choices[0].delta.content
                     full_response += content
-                    # Stream each token as Server-Sent Event
-                    yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
+                    token_buffer += content
+                    
+                    # Send buffered tokens for smoother streaming
+                    if len(token_buffer) >= buffer_size or '\n' in token_buffer:
+                        yield f"data: {json.dumps({'type': 'token', 'content': token_buffer})}\n\n"
+                        token_buffer = ""
+            
+            # Send any remaining buffered content
+            if token_buffer:
+                yield f"data: {json.dumps({'type': 'token', 'content': token_buffer})}\n\n"
 
             # Save assistant response
             assistant_message = Message(

@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Float
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Float, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, timezone
@@ -47,23 +47,28 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     title = Column(String, default="New Conversation")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     # Relationships
     user = relationship("User", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation")
 
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_conversation_user_updated', 'user_id', 'updated_at'),
+    )
+
 class Message(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"))
-    role = Column(String, nullable=False)  # 'user' or 'assistant'
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), index=True)
+    role = Column(String, nullable=False, index=True)
     content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     # AI Context
     cognitive_state = Column(Text, default="{}")  # JSON string
@@ -71,35 +76,54 @@ class Message(Base):
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
 
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_message_conv_timestamp', 'conversation_id', 'timestamp'),
+        Index('idx_message_role_timestamp', 'role', 'timestamp'),
+    )
+
 class Memory(Base):
     __tablename__ = "memories"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     content = Column(Text, nullable=False)
-    category = Column(String(50), default="general")
-    importance_score = Column(Float, default=0.0)
+    category = Column(String(50), default="general", index=True)
+    importance_score = Column(Float, default=0.0, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    last_accessed = Column(DateTime, default=datetime.utcnow)
+    last_accessed = Column(DateTime, default=datetime.utcnow, index=True)
     accessed_count = Column(Integer, default=0)
 
     # Relationship
     user = relationship("User", back_populates="memories")
 
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_memory_user_importance', 'user_id', 'importance_score'),
+        Index('idx_memory_user_accessed', 'user_id', 'last_accessed'),
+        Index('idx_memory_category_importance', 'category', 'importance_score'),
+    )
+
 class UserPreference(Base):
     __tablename__ = "user_preferences"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    preference_type = Column(String(50), nullable=False)  # communication_style, topic_interest, response_length, etc.
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    preference_type = Column(String(50), nullable=False, index=True)
     preference_value = Column(String(200), nullable=False)
-    confidence_score = Column(Float, default=0.0)  # How confident we are about this preference
-    learned_from = Column(String(100), default="conversation")  # conversation, explicit, feedback
+    confidence_score = Column(Float, default=0.0, index=True)
+    learned_from = Column(String(100), default="conversation")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationship
     user = relationship("User", back_populates="preferences")
+
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_user_pref_type_confidence', 'user_id', 'preference_type', 'confidence_score'),
+        Index('idx_user_pref_confidence', 'user_id', 'confidence_score'),
+    )
 
 class InteractionPattern(Base):
     __tablename__ = "interaction_patterns"
