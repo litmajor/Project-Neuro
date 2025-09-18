@@ -6,9 +6,15 @@ from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import JSON # Import JSON type
 from sqlalchemy.sql import func # Import func for default values
 
-# Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost/neuro_db")
-engine = create_engine(DATABASE_URL)
+# Database setup - Use SQLite for local development if PostgreSQL not available
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./neuro.db")
+
+# Handle SQLite vs PostgreSQL connection settings
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -106,7 +112,7 @@ class InteractionPattern(Base):
     detected_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     confidence_score = Column(Float, default=1.0)
 
-    user = relationship("User", back_populates="interaction_patterns")
+    user = relationship("User", back_populates="patterns")
 
 class SharedConversation(Base):
     __tablename__ = "shared_conversations"
