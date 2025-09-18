@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 export interface User {
@@ -27,7 +26,7 @@ export class AuthService {
     // Load token from localStorage on initialization
     const savedToken = localStorage.getItem('auth_token');
     const savedUser = localStorage.getItem('user_data');
-    
+
     if (savedToken && savedUser) {
       this.token = savedToken;
       this.user = JSON.parse(savedUser);
@@ -168,7 +167,7 @@ export function useAuth() {
     setIsAuthenticated(false);
   };
 
-  const updatePersonality = async (personality: Record<string, number>, mood: string, energy: number) => {
+  const updatePersonality = async (personality: Record<string, number>, mood: string, energy: number): Promise<User> => {
     try {
       const updatedUser = await authService.updatePersonality(personality, mood, energy);
       setUser(updatedUser);
@@ -179,6 +178,12 @@ export function useAuth() {
     }
   };
 
+  const joinSharedConversation = async (conversationId: number) => {
+    // This would be called when user joins a shared conversation
+    // to set up WebSocket listeners for that specific conversation
+    console.log(`Joining shared conversation ${conversationId}`);
+  };
+
   return {
     user,
     isAuthenticated,
@@ -186,5 +191,6 @@ export function useAuth() {
     register,
     logout,
     updatePersonality,
+    joinSharedConversation
   };
 }

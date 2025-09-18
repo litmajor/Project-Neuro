@@ -12,11 +12,14 @@ import {
   MessageCircle,
   Sparkles,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Users
 } from 'lucide-react';
 import './App.css';
 import { useAuth } from './auth';
 import { LoginForm } from './LoginForm';
+import { FileUpload } from './FileUpload';
+import { SharedConversations } from './SharedConversations';
 
 // Types for our advanced cognitive agent
 interface Message {
@@ -61,6 +64,9 @@ const App: React.FC = () => {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [conversations, setConversations] = useState<any[]>([]);
+  const [currentSharedConversation, setCurrentSharedConversation] = useState<number | null>(null);
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [showCollaborations, setShowCollaborations] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -271,6 +277,26 @@ const App: React.FC = () => {
     }
   };
 
+  // Handle joining shared conversation
+  const handleJoinSharedConversation = (conversationId: number) => {
+    setCurrentSharedConversation(conversationId);
+    setShowCollaborations(false);
+    // Clear current messages to load shared conversation
+    setMessages([]);
+  };
+
+  // Handle file upload
+  const handleFileUploaded = (file: any) => {
+    // Add file reference to messages
+    const fileMessage: Message = {
+      id: `file_${Date.now()}`,
+      role: 'user',
+      content: `📎 Uploaded: ${file.filename}\n\n${file.analysis?.description || file.analysis?.analysis || 'File uploaded successfully'}`,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, fileMessage]);
+  };
+
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return <LoginForm onLogin={login} onRegister={register} />;
@@ -331,6 +357,26 @@ const App: React.FC = () => {
               }`} />
               {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
             </motion.div>
+
+            {/* Collaboration Button */}
+            <motion.button
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              onClick={() => setShowCollaborations(!showCollaborations)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Users className="w-5 h-5" />
+            </motion.button>
+
+            {/* File Upload Button */}
+            <motion.button
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              onClick={() => setShowFileUpload(!showFileUpload)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Sparkles className="w-5 h-5" />
+            </motion.button>
 
             {/* Settings Button */}
             <motion.button
@@ -408,6 +454,24 @@ const App: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* File Upload Section */}
+          <AnimatePresence>
+            {showFileUpload && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="p-6 bg-white/5 backdrop-blur-md border-t border-white/20"
+              >
+                <FileUpload 
+                  onFileUploaded={handleFileUploaded}
+                  conversationId={currentSharedConversation ? undefined : 1}
+                  sharedConversationId={currentSharedConversation || undefined}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Input Area */}
           <motion.div 
             className="p-6 bg-white/5 backdrop-blur-md border-t border-white/20"
@@ -470,6 +534,19 @@ const App: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
+          {/* Collaborations Section */}
+          <AnimatePresence>
+            {showCollaborations && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6"
+              >
+                <SharedConversations onJoinConversation={handleJoinSharedConversation} />
+              </motion.div>
+            )}
+          </AnimatePresence>
           <h2 className="text-xl font-bold mb-6 flex items-center space-x-2">
             <Activity className="w-5 h-5 text-blue-400" />
             <span>Cognitive State</span>
