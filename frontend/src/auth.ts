@@ -22,7 +22,7 @@ const host = window.location.host;
 const API_BASE = isLocal 
   ? 'localhost:8000' 
   : host.includes('replit.dev') || host.includes('replit.app')
-    ? host.replace(/^[^-]+-/, '8000-') // Replace the port prefix
+    ? '8000-' + host.split('-').slice(1).join('-') // Proper Replit URL construction
     : 'localhost:8000';
 const API_PROTOCOL = isLocal ? 'http' : 'https';
 

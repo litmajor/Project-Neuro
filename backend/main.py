@@ -517,6 +517,7 @@ app.add_middleware(
         "http://localhost:5173", 
         "http://localhost:5000", 
         "https://ed54fe6e-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev",
+        "https://8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev",
         "https://*.replit.dev", 
         "https://*.replit.app"
     ],
@@ -525,6 +526,12 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+# Handle OPTIONS requests before other routes
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    """Handle all OPTIONS requests for CORS preflight"""
+    return {"message": "OK"}
 
 @app.get("/")
 async def root():
@@ -535,11 +542,6 @@ async def root():
         "status": "running",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
-
-@app.options("/{path:path}")
-async def options_handler(path: str):
-    """Handle all OPTIONS requests for CORS preflight"""
-    return {"message": "OK"}
 
 @app.get("/health")
 async def health_check():
