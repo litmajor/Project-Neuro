@@ -6,11 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 5173,
-    allowedHosts: [
-      'localhost',
-      '.replit.dev',
-      'e647f0bf-1df9-4bc5-a1fc-ff848945fbe5-00-gkmd3rwmaweh.picard.replit.dev'
-    ]
+    port: 5000,
+    allowedHosts: true
   }
 })
