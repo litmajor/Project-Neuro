@@ -551,6 +551,16 @@ async def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+@app.get("/api/auth/test")
+async def test_auth_endpoint(db: Session = Depends(get_db)):
+    """Test endpoint to debug authentication issues"""
+    users_count = db.query(User).count()
+    return {
+        "message": "Auth endpoint working",
+        "users_registered": users_count,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.get("/api/performance")
 async def performance_metrics(
     current_user: User = Depends(get_current_user),
@@ -615,19 +625,29 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 @app.post("/api/auth/login", response_model=Token)
 async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     """Login user"""
-    user = authenticate_user(db, user_data.username, user_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect username or password"
-        )
+    logger.info(f"Login attempt for username: {user_data.username}")
+    
+    try:
+        user = authenticate_user(db, user_data.username, user_data.password)
+        if not user:
+            logger.warning(f"Authentication failed for username: {user_data.username}")
+            raise HTTPException(
+                status_code=401,
+                detail="Incorrect username or password"
+            )
 
-    access_token = create_access_token(data={"sub": user.username})
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        user=user_to_response(user)
-    )
+        logger.info(f"Login successful for username: {user_data.username}")
+        access_token = create_access_token(data={"sub": user.username})
+        return Token(
+            access_token=access_token,
+            token_type="bearer",
+            user=user_to_response(user)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error for {user_data.username}: {e}")
+        raise HTTPException(status_code=500, detail="Login failed")
 
 @app.get("/api/auth/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):

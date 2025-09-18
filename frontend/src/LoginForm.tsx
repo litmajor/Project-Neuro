@@ -215,5 +215,5 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
   );
 };
 
-export { LoginForm };
+export default LoginForm;
 export default LoginForm;
