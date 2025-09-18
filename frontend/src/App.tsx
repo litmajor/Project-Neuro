@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Brain, 
-  Mic, 
-  MicOff, 
   Send, 
   Settings, 
   Activity,
@@ -13,13 +11,17 @@ import {
   Sparkles,
   LogOut,
   User as UserIcon,
-  Users
+  Users,
+  Menu
 } from 'lucide-react';
 import './App.css';
 import { useAuth } from './auth';
 import { LoginForm } from './LoginForm';
 import { FileUpload } from './FileUpload';
 import { SharedConversations } from './SharedConversations';
+import { MessageReactions } from './MessageReactions';
+import { ThemeProvider, ThemeToggle, useTheme } from './ThemeProvider';
+import { VoiceFeatures } from './VoiceFeatures';
 
 // Types for our advanced cognitive agent
 interface Message {
@@ -45,8 +47,9 @@ interface WebSocketMessage {
   timestamp?: string;
 }
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const { user, isAuthenticated, login, register, logout, updatePersonality } = useAuth();
+  const { theme } = useTheme();
   
   // State management
   const [messages, setMessages] = useState<Message[]>([]);
@@ -67,6 +70,8 @@ const App: React.FC = () => {
   const [currentSharedConversation, setCurrentSharedConversation] = useState<number | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showCollaborations, setShowCollaborations] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, number>>>({});
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -259,6 +264,34 @@ const App: React.FC = () => {
     }
   };
 
+  // Handle voice input
+  const handleVoiceInput = (text: string) => {
+    setInputValue(text);
+  };
+
+  // Handle message reactions
+  const handleReaction = (messageId: string, reaction: string) => {
+    setMessageReactions(prev => ({
+      ...prev,
+      [messageId]: {
+        ...prev[messageId],
+        [reaction]: (prev[messageId]?.[reaction] || 0) + 1
+      }
+    }));
+  };
+
+  // Speak assistant messages when voice is enabled
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant' && !lastMessage.isStreaming && (window as any).speakText) {
+        // Clean up the message content for speech
+        const cleanContent = lastMessage.content.replace(/[*#`]/g, '').replace(/\n+/g, ' ');
+        (window as any).speakText(cleanContent);
+      }
+    }
+  }, [messages]);
+
   // Get mood color based on cognitive state
   const getMoodColor = (mood: string) => {
     switch (mood) {
@@ -303,10 +336,18 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white font-sans">
+    <div className={`min-h-screen transition-colors font-sans ${
+      theme === 'light' 
+        ? 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 text-gray-900' 
+        : 'bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white'
+    }`}>
       {/* Header */}
       <motion.header 
-        className="bg-white/10 backdrop-blur-md border-b border-white/20 p-4"
+        className={`backdrop-blur-md border-b p-4 ${
+          theme === 'light'
+            ? 'bg-white/80 border-gray-200'
+            : 'bg-white/10 border-white/20'
+        }`}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -327,20 +368,38 @@ const App: React.FC = () => {
             >
               <Brain className="w-8 h-8 text-blue-400" />
             </motion.div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Neuro v3
               </h1>
-              <p className="text-sm text-gray-400">Advanced Cognitive Agent</p>
+              <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
+                Advanced Cognitive Agent
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            {/* Mobile menu button */}
+            <motion.button
+              className={`md:hidden p-2 rounded-lg transition-colors ${
+                theme === 'light' ? 'hover:bg-gray-200' : 'hover:bg-white/10'
+              }`}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Menu className="w-5 h-5" />
+            </motion.button>
             {/* User Info */}
-            <div className="flex items-center space-x-2 text-sm">
+            <div className={`hidden sm:flex items-center space-x-2 text-sm ${
+              theme === 'light' ? 'text-gray-700' : 'text-gray-300'
+            }`}>
               <UserIcon className="w-4 h-4 text-blue-400" />
-              <span className="text-gray-300">Welcome, {user?.username}</span>
+              <span>Welcome, {user?.username}</span>
             </div>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {/* Connection Status */}
             <motion.div 
@@ -401,9 +460,22 @@ const App: React.FC = () => {
         </div>
       </motion.header>
 
-      <div className="max-w-7xl mx-auto flex h-[calc(100vh-80px)]">
+      <div className="max-w-7xl mx-auto flex h-[calc(100vh-80px)] relative">
+        {/* Mobile sidebar overlay */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <AnimatePresence>
@@ -444,9 +516,20 @@ const App: React.FC = () => {
                         </motion.div>
                       )}
                     </div>
-                    <div className="prose prose-invert max-w-none">
+                    <div className={`prose max-w-none ${theme === 'light' ? 'prose-gray' : 'prose-invert'}`}>
                       {message.content}
                     </div>
+                    
+                    {/* Message reactions */}
+                    {message.role === 'assistant' && !message.isStreaming && (
+                      <div className="mt-3 pt-2 border-t border-white/10">
+                        <MessageReactions
+                          messageId={message.id}
+                          onReaction={handleReaction}
+                          existingReactions={messageReactions[message.id]}
+                        />
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -474,24 +557,21 @@ const App: React.FC = () => {
 
           {/* Input Area */}
           <motion.div 
-            className="p-6 bg-white/5 backdrop-blur-md border-t border-white/20"
+            className={`p-4 md:p-6 backdrop-blur-md border-t ${
+              theme === 'light'
+                ? 'bg-gray-50/80 border-gray-200'
+                : 'bg-white/5 border-white/20'
+            }`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <div className="flex items-center space-x-4">
-              <motion.button
-                className={`p-3 rounded-full transition-colors ${
-                  isListening 
-                    ? 'bg-red-500 text-white animate-pulse' 
-                    : 'bg-white/10 hover:bg-white/20'
-                }`}
-                onClick={() => setIsListening(!isListening)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </motion.button>
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <VoiceFeatures
+                onVoiceInput={handleVoiceInput}
+                isListening={isListening}
+                setIsListening={setIsListening}
+              />
 
               <div className="flex-1 relative">
                 <textarea
@@ -499,8 +579,12 @@ const App: React.FC = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Share your thoughts with Neuro..."
-                  className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 text-white"
-                  rows={2}
+                  className={`w-full p-4 border rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    theme === 'light'
+                      ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      : 'bg-white/10 border-white/20 text-white placeholder-gray-400'
+                  }`}
+                  rows={window.innerWidth < 768 ? 1 : 2}
                   disabled={isStreaming}
                 />
               </div>
@@ -529,7 +613,13 @@ const App: React.FC = () => {
 
         {/* Cognitive State Sidebar */}
         <motion.div 
-          className="w-80 bg-white/5 backdrop-blur-md border-l border-white/20 p-6 overflow-y-auto"
+          className={`${
+            sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+          } fixed md:relative md:translate-x-0 top-0 right-0 w-80 h-full backdrop-blur-md border-l p-4 md:p-6 overflow-y-auto z-50 transition-transform ${
+            theme === 'light'
+              ? 'bg-gray-50/90 border-gray-200'
+              : 'bg-gray-900/90 border-white/20'
+          }`}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
@@ -665,6 +755,14 @@ const App: React.FC = () => {
         </motion.div>
       </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 };
 

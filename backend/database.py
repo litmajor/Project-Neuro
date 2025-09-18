@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import JSON # Import JSON type
+from sqlalchemy.sql import func # Import func for default values
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost/neuro_db")
@@ -140,13 +141,12 @@ class SharedConversationParticipant(Base):
 class SharedMessage(Base):
     __tablename__ = "shared_messages"
 
-    id = Column(Integer, primary_key=True, index=True)
-    shared_conversation_id = Column(Integer, ForeignKey("shared_conversations.id"))
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # None for AI messages
+    id = Column(Integer, primary_key=True)
+    shared_conversation_id = Column(Integer, ForeignKey('shared_conversations.id'))
     content = Column(Text, nullable=False)
-    message_type = Column(String, default="text")  # "text", "image", "file", "code"
-    metadata = Column(JSON, nullable=True)  # For file info, code language, etc.
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    role = Column(String(50), nullable=False)  # 'user' or 'assistant'
+    timestamp = Column(DateTime, default=func.now())
+    message_metadata = Column(JSON)  # Additional message metadata (renamed from metadata)
 
     shared_conversation = relationship("SharedConversation", back_populates="messages")
     user = relationship("User")

@@ -18,6 +18,19 @@
   -webkit-text-size-adjust: 100%;
 }
 
+.light {
+  color-scheme: light;
+  color: rgba(0, 0, 0, 0.87);
+  background-color: #fafafa;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+}
+
 body {
   margin: 0;
   display: flex;
