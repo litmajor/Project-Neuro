@@ -6,7 +6,7 @@ packages = ["libxcrypt"]
 
 [agent]
 expertMode = true
-integrations = ["javascript_openai:1.0.0", "python_openai:1.0.0", "javascript_database:1.0.0"]
+integrations = ["javascript_openai:1.0.0", "python_openai:1.0.0", "javascript_database:1.0.0", "python_database:1.0.0"]
 
 [workflows]
 runButton = "Full Stack"
