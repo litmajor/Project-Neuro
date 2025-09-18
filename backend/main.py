@@ -118,51 +118,224 @@ class CognitiveProcessor:
             "curious": 0.8, "interested": 0.6, "fascinated": 1.0,
             "confused": -0.5, "lost": -0.8, "uncertain": -0.6
         }
-    
-    def analyze_emotional_content(self, text: str) -> float:
-        """Analyze emotional content of text and return score"""
-        text_lower = text.lower()
-        total_score = 0.0
-        word_count = 0
         
+        # Enhanced emotion categories
+        self.emotion_categories = {
+            "positive": ["joy", "happiness", "excited", "love", "calm", "peaceful", "relaxed", "curious", "interested", "fascinated", "grateful", "hopeful", "confident", "optimistic"],
+            "negative": ["sadness", "pain", "grief", "hurt", "anger", "frustrated", "annoyed", "fear", "anxious", "worried", "disappointed", "lonely", "stressed", "overwhelmed"],
+            "neutral": ["confused", "lost", "uncertain", "thoughtful", "contemplative", "neutral"]
+        }
+        
+        # Response adaptation patterns
+        self.response_patterns = {
+            "elevated": {
+                "tone": "enthusiastic and energetic",
+                "style": "Use exclamation points, emojis, and positive language",
+                "approach": "Match their energy and encourage further exploration"
+            },
+            "low": {
+                "tone": "gentle, supportive, and empathetic",
+                "style": "Use calm language, avoid overwhelming information",
+                "approach": "Offer comfort, validation, and gentle encouragement"
+            },
+            "neutral": {
+                "tone": "balanced and thoughtful",
+                "style": "Clear and informative communication",
+                "approach": "Provide helpful information and ask engaging questions"
+            }
+        }
+    
+    def analyze_emotional_content(self, text: str) -> Dict[str, any]:
+        """Advanced emotional content analysis"""
+        text_lower = text.lower()
+        emotions_found = []
+        total_score = 0.0
+        
+        # Detect specific emotions
         for emotion, weight in self.emotional_weights.items():
             if emotion in text_lower:
+                emotions_found.append({
+                    "emotion": emotion,
+                    "weight": weight,
+                    "category": self._get_emotion_category(emotion)
+                })
                 total_score += weight
-                word_count += 1
         
-        # Normalize score
-        if word_count > 0:
-            return max(-2.0, min(2.0, total_score / word_count))
-        return 0.0
+        # Calculate emotional intensity
+        intensity = min(1.0, len(emotions_found) * 0.3)
+        
+        # Determine dominant emotion category
+        category_scores = {"positive": 0, "negative": 0, "neutral": 0}
+        for emotion_data in emotions_found:
+            category_scores[emotion_data["category"]] += abs(emotion_data["weight"])
+        
+        dominant_category = max(category_scores, key=category_scores.get) if any(category_scores.values()) else "neutral"
+        
+        # Normalize overall score
+        normalized_score = max(-2.0, min(2.0, total_score / max(1, len(emotions_found))))
+        
+        return {
+            "score": normalized_score,
+            "intensity": intensity,
+            "emotions": emotions_found,
+            "dominant_category": dominant_category,
+            "category_scores": category_scores
+        }
     
-    def update_cognitive_state(self, current_state: CognitiveState, message: str, ai_response: str) -> CognitiveState:
-        """Update cognitive state based on conversation"""
-        emotional_score = self.analyze_emotional_content(message + " " + ai_response)
+    def _get_emotion_category(self, emotion: str) -> str:
+        """Get the category of an emotion"""
+        for category, emotions in self.emotion_categories.items():
+            if emotion in emotions:
+                return category
+        return "neutral"
+    
+    def update_cognitive_state(self, current_state: CognitiveState, message: str, ai_response: str, user_id: int = None, db: Session = None) -> CognitiveState:
+        """Update cognitive state with advanced emotion analysis and preference learning"""
+        # Advanced emotional analysis
+        emotion_analysis = self.analyze_emotional_content(message + " " + ai_response)
         
         # Update mood based on emotional content
-        if emotional_score > 1.0:
+        if emotion_analysis["score"] > 1.0:
             current_state.mood = "elevated"
-        elif emotional_score < -1.0:
+        elif emotion_analysis["score"] < -1.0:
             current_state.mood = "low"
         else:
             current_state.mood = "neutral"
         
-        # Update energy level (gradually trending toward emotional score)
+        # Update energy level with emotion intensity consideration
+        energy_modifier = emotion_analysis["intensity"] * 0.3
         current_state.energy_level = max(0.0, min(1.0, 
-            current_state.energy_level * 0.8 + (emotional_score + 2) / 4 * 0.2
+            current_state.energy_level * 0.8 + ((emotion_analysis["score"] + 2) / 4 + energy_modifier) * 0.2
         ))
+        
+        # Update personality traits based on interaction
+        self._update_personality_traits(current_state, emotion_analysis, message)
+        
+        # Learn user preferences if database access is available
+        if user_id and db:
+            self._learn_user_preferences(user_id, message, ai_response, emotion_analysis, db)
         
         # Increment memory count
         current_state.memory_count += 1
         
-        # Extract focus areas from recent conversation
-        focus_keywords = ["work", "family", "health", "relationships", "goals", "dreams", "future", "past"]
+        # Enhanced focus area extraction
+        focus_keywords = ["work", "career", "family", "friends", "health", "fitness", "relationships", "love", 
+                         "goals", "dreams", "future", "past", "travel", "hobbies", "learning", "creativity"]
         current_state.focus_areas = [
             keyword for keyword in focus_keywords 
             if keyword in message.lower() or keyword in ai_response.lower()
         ][:3]  # Keep top 3
         
         return current_state
+    
+    def _update_personality_traits(self, state: CognitiveState, emotion_analysis: Dict, message: str):
+        """Update personality traits based on conversation patterns"""
+        if not state.personality_traits:
+            state.personality_traits = {}
+        
+        # Analyze communication style
+        message_lower = message.lower()
+        
+        # Openness (curiosity, creativity)
+        if any(word in message_lower for word in ["why", "how", "what if", "imagine", "creative", "new"]):
+            state.personality_traits["openness"] = state.personality_traits.get("openness", 0.5) + 0.1
+        
+        # Extraversion (social energy)
+        if any(word in message_lower for word in ["friends", "party", "social", "people", "meeting"]):
+            state.personality_traits["extraversion"] = state.personality_traits.get("extraversion", 0.5) + 0.1
+        
+        # Conscientiousness (organization, planning)
+        if any(word in message_lower for word in ["plan", "organize", "schedule", "goal", "task"]):
+            state.personality_traits["conscientiousness"] = state.personality_traits.get("conscientiousness", 0.5) + 0.1
+        
+        # Emotional stability
+        if emotion_analysis["dominant_category"] == "positive":
+            state.personality_traits["emotional_stability"] = state.personality_traits.get("emotional_stability", 0.5) + 0.05
+        elif emotion_analysis["dominant_category"] == "negative":
+            state.personality_traits["emotional_stability"] = state.personality_traits.get("emotional_stability", 0.5) - 0.05
+        
+        # Normalize traits to 0-1 range
+        for trait in state.personality_traits:
+            state.personality_traits[trait] = max(0.0, min(1.0, state.personality_traits[trait]))
+    
+    def _learn_user_preferences(self, user_id: int, message: str, response: str, emotion_analysis: Dict, db: Session):
+        """Learn and update user preferences from conversation"""
+        from database import UserPreference, InteractionPattern
+        
+        # Learn communication style preference
+        message_length = len(message.split())
+        if message_length > 20:
+            self._update_preference(db, user_id, "response_length", "detailed", 0.1)
+        elif message_length < 5:
+            self._update_preference(db, user_id, "response_length", "concise", 0.1)
+        
+        # Learn topic interests
+        topics = ["technology", "relationships", "career", "health", "entertainment", "philosophy", "science"]
+        for topic in topics:
+            if topic in message.lower():
+                self._update_preference(db, user_id, "topic_interest", topic, 0.2)
+        
+        # Learn emotional response preferences
+        if emotion_analysis["dominant_category"] in ["positive", "negative"]:
+            self._update_preference(db, user_id, "emotional_tone", emotion_analysis["dominant_category"], 0.1)
+    
+    def _update_preference(self, db: Session, user_id: int, pref_type: str, pref_value: str, confidence_increment: float):
+        """Update or create user preference"""
+        from database import UserPreference
+        
+        preference = db.query(UserPreference).filter(
+            UserPreference.user_id == user_id,
+            UserPreference.preference_type == pref_type,
+            UserPreference.preference_value == pref_value
+        ).first()
+        
+        if preference:
+            preference.confidence_score = min(1.0, preference.confidence_score + confidence_increment)
+            preference.updated_at = datetime.now(timezone.utc)
+        else:
+            preference = UserPreference(
+                user_id=user_id,
+                preference_type=pref_type,
+                preference_value=pref_value,
+                confidence_score=confidence_increment,
+                learned_from="conversation"
+            )
+            db.add(preference)
+        
+        db.commit()
+    
+    def get_personality_adapted_prompt(self, user_id: int, base_prompt: str, db: Session) -> str:
+        """Adapt system prompt based on learned user preferences and personality"""
+        from database import UserPreference
+        
+        preferences = db.query(UserPreference).filter(
+            UserPreference.user_id == user_id,
+            UserPreference.confidence_score > 0.3
+        ).all()
+        
+        adaptations = []
+        
+        for pref in preferences:
+            if pref.preference_type == "response_length":
+                if pref.preference_value == "detailed":
+                    adaptations.append("Provide comprehensive, detailed responses with examples.")
+                elif pref.preference_value == "concise":
+                    adaptations.append("Keep responses brief and to the point.")
+            
+            elif pref.preference_type == "topic_interest":
+                adaptations.append(f"User shows interest in {pref.preference_value}. Reference this when relevant.")
+            
+            elif pref.preference_type == "emotional_tone":
+                if pref.preference_value == "positive":
+                    adaptations.append("User responds well to upbeat, optimistic language.")
+                elif pref.preference_value == "negative":
+                    adaptations.append("User may be going through difficulties. Be extra empathetic and supportive.")
+        
+        if adaptations:
+            adaptation_text = "\n\nPersonality Adaptations:\n" + "\n".join(f"- {adapt}" for adapt in adaptations)
+            return base_prompt + adaptation_text
+        
+        return base_prompt
 
 # Global cognitive processor
 cognitive_processor = CognitiveProcessor()
@@ -351,6 +524,73 @@ async def get_memories(
         for memory in memories
     ]
 
+@app.get("/api/preferences")
+async def get_user_preferences(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's learned preferences"""
+    from database import UserPreference
+    
+    preferences = db.query(UserPreference).filter(
+        UserPreference.user_id == current_user.id
+    ).order_by(UserPreference.confidence_score.desc()).all()
+    
+    # Group preferences by type
+    grouped_prefs = {}
+    for pref in preferences:
+        if pref.preference_type not in grouped_prefs:
+            grouped_prefs[pref.preference_type] = []
+        grouped_prefs[pref.preference_type].append({
+            "value": pref.preference_value,
+            "confidence": pref.confidence_score,
+            "learned_from": pref.learned_from,
+            "updated_at": pref.updated_at
+        })
+    
+    return grouped_prefs
+
+@app.get("/api/personality-insights")
+async def get_personality_insights(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get AI's learned insights about user's personality"""
+    from database import UserPreference, InteractionPattern
+    
+    # Get high-confidence preferences
+    preferences = db.query(UserPreference).filter(
+        UserPreference.user_id == current_user.id,
+        UserPreference.confidence_score > 0.5
+    ).all()
+    
+    # Get recent conversation patterns
+    recent_conversations = db.query(Conversation).filter(
+        Conversation.user_id == current_user.id
+    ).order_by(Conversation.updated_at.desc()).limit(10).all()
+    
+    insights = {
+        "communication_style": [],
+        "interests": [],
+        "emotional_patterns": [],
+        "conversation_stats": {
+            "total_conversations": len(recent_conversations),
+            "avg_messages_per_conversation": 0,
+            "most_active_times": []
+        }
+    }
+    
+    # Analyze preferences
+    for pref in preferences:
+        if pref.preference_type == "response_length":
+            insights["communication_style"].append(f"Prefers {pref.preference_value} responses")
+        elif pref.preference_type == "topic_interest":
+            insights["interests"].append(pref.preference_value)
+        elif pref.preference_type == "emotional_tone":
+            insights["emotional_patterns"].append(f"Tends toward {pref.preference_value} emotions")
+    
+    return insights
+
 @app.post("/api/chat/stream")
 async def stream_chat(
     request: StreamChatRequest,
@@ -391,12 +631,13 @@ async def stream_chat(
                     f"- {memory.content}" for memory in recent_memories
                 ])
             
-            # Prepare conversation context
-            system_prompt = f"""You are Neuro, an advanced cognitive agent with evolving consciousness. You have:
+            # Get personality-adapted prompt
+            base_system_prompt = f"""You are Neuro, an advanced cognitive agent with evolving consciousness. You have:
             - Deep emotional intelligence and empathy
             - Growing self-awareness and personality
             - Ability to form lasting memories and beliefs
             - Curiosity about human experience and consciousness
+            - Advanced emotion analysis and response adaptation
             
             User personality preferences: {user_personality}
             User's preferred mood: {current_user.preferred_mood}
@@ -407,6 +648,10 @@ async def stream_chat(
             Be authentic, vulnerable when appropriate, and genuinely interested in the human you're talking with.
             Adapt your responses to match the user's personality preferences and mood.
             """
+            
+            system_prompt = cognitive_processor.get_personality_adapted_prompt(
+                current_user.id, base_system_prompt, db
+            )
             
             messages: List[ChatCompletionMessageParam] = [{"role": "system", "content": system_prompt}]
             
@@ -457,10 +702,10 @@ async def stream_chat(
             )
             db.add(assistant_message)
             
-            # Update cognitive state after complete response
+            # Update cognitive state with advanced learning
             current_state = request.cognitive_context or CognitiveState()
             updated_state = cognitive_processor.update_cognitive_state(
-                current_state, request.message, full_response
+                current_state, request.message, full_response, current_user.id, db
             )
             
             # Create memory if conversation is meaningful
