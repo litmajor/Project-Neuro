@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -16,7 +17,8 @@ import {
 } from 'lucide-react';
 import './App.css';
 import { useAuth } from './auth';
-import { LoginForm } from './LoginForm';
+import LoginForm from './LoginForm';
+import LandingPage from './LandingPage';
 import { FileUpload } from './FileUpload';
 import { SharedConversations } from './SharedConversations';
 import { MessageReactions } from './MessageReactions';
@@ -50,6 +52,7 @@ interface WebSocketMessage {
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, login, register, logout, updatePersonality } = useAuth();
   const { theme } = useTheme();
+  const [showLogin, setShowLogin] = useState(false);
   
   // State management
   const [messages, setMessages] = useState<Message[]>([]);
@@ -80,12 +83,14 @@ const AppContent: React.FC = () => {
 
   // WebSocket connection for real-time updates
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const isLocal = window.location.hostname === 'localhost';
     const host = window.location.host;
     const backendHost = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
     const wsProtocol = isLocal ? 'ws' : 'wss';
-    const wsUrl = `${wsProtocol}://${backendHost}/ws?client_id=${clientId}`;
+    const wsUrl = `${wsProtocol}://${backendHost}/ws/${clientId}`;
     
     console.log('🔗 WebSocket URL:', wsUrl);
 
@@ -142,7 +147,20 @@ const AppContent: React.FC = () => {
         wsRef.current.close();
       }
     };
-  }, []);
+  }, [isAuthenticated]);
+
+  // Load initial greeting
+  useEffect(() => {
+    if (isAuthenticated && messages.length === 0) {
+      const welcomeMessage: Message = {
+        id: 'welcome_msg',
+        role: 'assistant',
+        content: `Hello ${user?.username}! I'm Neuro, your advanced cognitive assistant. I have persistent memory and evolve through our conversations. How can I help you today?`,
+        timestamp: new Date()
+      };
+      setMessages([welcomeMessage]);
+    }
+  }, [isAuthenticated, user, messages.length]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -151,7 +169,7 @@ const AppContent: React.FC = () => {
 
   // Send message to AI with streaming response
   const sendMessage = async () => {
-    if (!inputValue.trim() || isStreaming) return;
+    if (!inputValue.trim() || isStreaming || !isAuthenticated) return;
 
     const userMessage: Message = {
       id: `msg_${Date.now()}`,
@@ -186,7 +204,7 @@ const AppContent: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(isAuthenticated ? { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` } : {})
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
           message: userMessage.content,
@@ -196,7 +214,8 @@ const AppContent: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to get AI response');
       }
 
       const reader = response.body?.getReader();
@@ -246,7 +265,7 @@ const AppContent: React.FC = () => {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
 
       // Update message with error
@@ -254,7 +273,7 @@ const AppContent: React.FC = () => {
         msg.id === assistantMessageId 
           ? { 
               ...msg, 
-              content: '❌ Sorry, I encountered an error. Please try again.',
+              content: `❌ ${error.message}`,
               isStreaming: false 
             }
           : msg
@@ -287,18 +306,6 @@ const AppContent: React.FC = () => {
       }
     }));
   };
-
-  // Speak assistant messages when voice is enabled
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'assistant' && !lastMessage.isStreaming && (window as any).speakText) {
-        // Clean up the message content for speech
-        const cleanContent = lastMessage.content.replace(/[*#`]/g, '').replace(/\n+/g, ' ');
-        (window as any).speakText(cleanContent);
-      }
-    }
-  }, [messages]);
 
   // Get mood color based on cognitive state
   const getMoodColor = (mood: string) => {
@@ -338,9 +345,12 @@ const AppContent: React.FC = () => {
     setMessages(prev => [...prev, fileMessage]);
   };
 
-  // Show login form if not authenticated
+  // Show landing page or login form if not authenticated
   if (!isAuthenticated) {
-    return <LoginForm onLogin={login} onRegister={register} />;
+    if (showLogin) {
+      return <LoginForm onLogin={login} onRegister={register} />;
+    }
+    return <LandingPage onGetStarted={() => setShowLogin(true)} />;
   }
 
   return (
@@ -378,10 +388,10 @@ const AppContent: React.FC = () => {
             </motion.div>
             <div className="hidden sm:block">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Neuro v3
+                Neuro Assistant
               </h1>
               <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
-                Advanced Cognitive Agent
+                Your Persistent AI Companion
               </p>
             </div>
           </div>
@@ -422,38 +432,8 @@ const AppContent: React.FC = () => {
               <div className={`w-2 h-2 rounded-full ${
                 isConnected ? 'bg-green-400' : 'bg-red-400'
               }`} />
-              {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
+              {isConnected ? 'CONNECTED' : 'CONNECTING'}
             </motion.div>
-
-            {/* Collaboration Button */}
-            <motion.button
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              onClick={() => setShowCollaborations(!showCollaborations)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Users className="w-5 h-5" />
-            </motion.button>
-
-            {/* File Upload Button */}
-            <motion.button
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              onClick={() => setShowFileUpload(!showFileUpload)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Sparkles className="w-5 h-5" />
-            </motion.button>
-
-            {/* Settings Button */}
-            <motion.button
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              onClick={() => setShowSettings(!showSettings)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Settings className="w-5 h-5" />
-            </motion.button>
 
             {/* Logout Button */}
             <motion.button
@@ -545,24 +525,6 @@ const AppContent: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* File Upload Section */}
-          <AnimatePresence>
-            {showFileUpload && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="p-6 bg-white/5 backdrop-blur-md border-t border-white/20"
-              >
-                <FileUpload 
-                  onFileUploaded={handleFileUploaded}
-                  conversationId={currentSharedConversation ? undefined : 1}
-                  sharedConversationId={currentSharedConversation || undefined}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Input Area */}
           <motion.div 
             className={`p-4 md:p-6 backdrop-blur-md border-t ${
@@ -632,19 +594,6 @@ const AppContent: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          {/* Collaborations Section */}
-          <AnimatePresence>
-            {showCollaborations && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6"
-              >
-                <SharedConversations onJoinConversation={handleJoinSharedConversation} />
-              </motion.div>
-            )}
-          </AnimatePresence>
           <h2 className="text-xl font-bold mb-6 flex items-center space-x-2">
             <Activity className="w-5 h-5 text-blue-400" />
             <span>Cognitive State</span>

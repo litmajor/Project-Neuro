@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { User, Mail, Lock, Brain } from "lucide-react";
 
-const LoginForm = () => {
+const LoginForm: React.FC<{
+  onLogin: (username: string, password: string) => Promise<any>;
+  onRegister: (username: string, email: string, password: string) => Promise<any>;
+}> = ({ onLogin, onRegister }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -9,22 +12,22 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (username === "demo" && password === "password") {
-        alert(`${isLogin ? "Login" : "Registration"} successful!`);
+    try {
+      if (isLogin) {
+        await onLogin(username, password);
       } else {
-        setError(
-          'Invalid credentials. Try username: "demo", password: "password"',
-        );
+        await onRegister(username, email, password);
       }
+    } catch (error: any) {
+      setError(error.message || `${isLogin ? "Login" : "Registration"} failed`);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -210,4 +213,5 @@ const LoginForm = () => {
   );
 };
 
+export { LoginForm };
 export default LoginForm;
