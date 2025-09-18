@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -53,7 +52,7 @@ const AppContent: React.FC = () => {
   const { user, isAuthenticated, login, register, logout, updatePersonality } = useAuth();
   const { theme } = useTheme();
   const [showLogin, setShowLogin] = useState(false);
-  
+
   // State management
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -91,7 +90,7 @@ const AppContent: React.FC = () => {
     const backendHost = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
     const wsProtocol = isLocal ? 'ws' : 'wss';
     const wsUrl = `${wsProtocol}://${backendHost}/ws/${clientId}`;
-    
+
     console.log('🔗 WebSocket URL:', wsUrl);
 
     const connectWebSocket = () => {
@@ -507,7 +506,7 @@ const AppContent: React.FC = () => {
                     <div className={`prose max-w-none ${theme === 'light' ? 'prose-gray' : 'prose-invert'}`}>
                       {message.content}
                     </div>
-                    
+
                     {/* Message reactions */}
                     {message.role === 'assistant' && !message.isStreaming && (
                       <div className="mt-3 pt-2 border-t border-white/10">

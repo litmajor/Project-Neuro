@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { User, Mail, Lock, Brain } from "lucide-react";
 
-const LoginForm: React.FC<{
+interface LoginFormProps {
   onLogin: (username: string, password: string) => Promise<any>;
   onRegister: (username: string, email: string, password: string) => Promise<any>;
-}> = ({ onLogin, onRegister }) => {
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
