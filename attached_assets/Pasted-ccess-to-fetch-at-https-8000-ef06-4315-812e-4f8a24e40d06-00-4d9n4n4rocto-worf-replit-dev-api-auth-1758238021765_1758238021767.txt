@@ -1,0 +1,214 @@
+ccess to fetch at 'https://8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev/api/auth/login' from origin 'https://ed54fe6e-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+auth.ts:93  POST https://8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev/api/auth/login net::ERR_FAILED
+login @ auth.ts:93
+login @ auth.ts:199
+handleSubmit @ LoginForm.tsx:24
+executeDispatch @ react-dom_client.js?v=477cec4b:11734
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+processDispatchQueue @ react-dom_client.js?v=477cec4b:11770
+(anonymous) @ react-dom_client.js?v=477cec4b:12180
+batchedUpdates$1 @ react-dom_client.js?v=477cec4b:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=477cec4b:11875
+dispatchEvent @ react-dom_client.js?v=477cec4b:14790
+dispatchDiscreteEvent @ react-dom_client.js?v=477cec4b:14771
+<button>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+LoginForm @ LoginForm.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performSyncWorkOnRoot @ react-dom_client.js?v=477cec4b:11633
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=477cec4b:11534
+processRootScheduleInMicrotask @ react-dom_client.js?v=477cec4b:11556
+(anonymous) @ react-dom_client.js?v=477cec4b:11647
+<LoginForm>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+AppContent @ App.tsx:350
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performSyncWorkOnRoot @ react-dom_client.js?v=477cec4b:11633
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=477cec4b:11534
+processRootScheduleInMicrotask @ react-dom_client.js?v=477cec4b:11556
+(anonymous) @ react-dom_client.js?v=477cec4b:11647
+<AppContent>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+App @ App.tsx:720
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=477cec4b:11621
+performWorkUntilDeadline @ react-dom_client.js?v=477cec4b:34
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+(anonymous) @ main.tsx:8
+auth.ts:126 ❌ Login error: TypeError: Failed to fetch
+    at AuthService.login (auth.ts:93:30)
+    at login (auth.ts:199:42)
+    at handleSubmit (LoginForm.tsx:24:15)
+    at executeDispatch (react-dom_client.js?v=477cec4b:11734:11)
+    at runWithFiberInDEV (react-dom_client.js?v=477cec4b:1483:72)
+    at processDispatchQueue (react-dom_client.js?v=477cec4b:11770:37)
+    at react-dom_client.js?v=477cec4b:12180:11
+    at batchedUpdates$1 (react-dom_client.js?v=477cec4b:2626:42)
+    at dispatchEventForPluginEventSystem (react-dom_client.js?v=477cec4b:11875:9)
+    at dispatchEvent (react-dom_client.js?v=477cec4b:14790:13)
+login @ auth.ts:126
+await in login
+login @ auth.ts:199
+handleSubmit @ LoginForm.tsx:24
+executeDispatch @ react-dom_client.js?v=477cec4b:11734
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+processDispatchQueue @ react-dom_client.js?v=477cec4b:11770
+(anonymous) @ react-dom_client.js?v=477cec4b:12180
+batchedUpdates$1 @ react-dom_client.js?v=477cec4b:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=477cec4b:11875
+dispatchEvent @ react-dom_client.js?v=477cec4b:14790
+dispatchDiscreteEvent @ react-dom_client.js?v=477cec4b:14771
+<button>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+LoginForm @ LoginForm.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performSyncWorkOnRoot @ react-dom_client.js?v=477cec4b:11633
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=477cec4b:11534
+processRootScheduleInMicrotask @ react-dom_client.js?v=477cec4b:11556
+(anonymous) @ react-dom_client.js?v=477cec4b:11647
+<LoginForm>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+AppContent @ App.tsx:350
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performSyncWorkOnRoot @ react-dom_client.js?v=477cec4b:11633
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=477cec4b:11534
+processRootScheduleInMicrotask @ react-dom_client.js?v=477cec4b:11556
+(anonymous) @ react-dom_client.js?v=477cec4b:11647
+<AppContent>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+App @ App.tsx:720
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=477cec4b:11621
+performWorkUntilDeadline @ react-dom_client.js?v=477cec4b:34
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+(anonymous) @ main.tsx:8
+auth.ts:204 Login failed: TypeError: Failed to fetch
+    at AuthService.login (auth.ts:93:30)
+    at login (auth.ts:199:42)
+    at handleSubmit (LoginForm.tsx:24:15)
+    at executeDispatch (react-dom_client.js?v=477cec4b:11734:11)
+    at runWithFiberInDEV (react-dom_client.js?v=477cec4b:1483:72)
+    at processDispatchQueue (react-dom_client.js?v=477cec4b:11770:37)
+    at react-dom_client.js?v=477cec4b:12180:11
+    at batchedUpdates$1 (react-dom_client.js?v=477cec4b:2626:42)
+    at dispatchEventForPluginEventSystem (react-dom_client.js?v=477cec4b:11875:9)
+    at dispatchEvent (react-dom_client.js?v=477cec4b:14790:13)
+login @ auth.ts:204
+await in login
+handleSubmit @ LoginForm.tsx:24
+executeDispatch @ react-dom_client.js?v=477cec4b:11734
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+processDispatchQueue @ react-dom_client.js?v=477cec4b:11770
+(anonymous) @ react-dom_client.js?v=477cec4b:12180
+batchedUpdates$1 @ react-dom_client.js?v=477cec4b:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=477cec4b:11875
+dispatchEvent @ react-dom_client.js?v=477cec4b:14790
+dispatchDiscreteEvent @ react-dom_client.js?v=477cec4b:14771
+<button>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+LoginForm @ LoginForm.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performSyncWorkOnRoot @ react-dom_client.js?v=477cec4b:11633
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=477cec4b:11534
+processRootScheduleInMicrotask @ react-dom_client.js?v=477cec4b:11556
+(anonymous) @ react-dom_client.js?v=477cec4b:11647
+<LoginForm>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+AppContent @ App.tsx:350
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performSyncWorkOnRoot @ react-dom_client.js?v=477cec4b:11633
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=477cec4b:11534
+processRootScheduleInMicrotask @ react-dom_client.js?v=477cec4b:11556
+(anonymous) @ react-dom_client.js?v=477cec4b:11647
+<AppContent>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+App @ App.tsx:720
+react_stack_bottom_frame @ react-dom_client.js?v=477cec4b:17422
+renderWithHooksAgain @ react-dom_client.js?v=477cec4b:4279
+renderWithHooks @ react-dom_client.js?v=477cec4b:4215
+updateFunctionComponent @ react-dom_client.js?v=477cec4b:6617
+beginWork @ react-dom_client.js?v=477cec4b:7652
+runWithFiberInDEV @ react-dom_client.js?v=477cec4b:1483
+performUnitOfWork @ react-dom_client.js?v=477cec4b:10866
+workLoopSync @ react-dom_client.js?v=477cec4b:10726
+renderRootSync @ react-dom_client.js?v=477cec4b:10709
+performWorkOnRoot @ react-dom_client.js?v=477cec4b:10328
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=477cec4b:11621
+performWorkUntilDeadline @ react-dom_client.js?v=477cec4b:34
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=477cec4b:248
+(anonymous) @ main.tsx:8
