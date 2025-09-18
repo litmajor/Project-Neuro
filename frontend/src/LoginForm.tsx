@@ -1,81 +1,56 @@
+import React, { useState } from "react";
+import { User, Mail, Lock, Brain } from "lucide-react";
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { User, Mail, Lock, Brain } from 'lucide-react';
-
-interface LoginFormProps {
-  onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (username: string, email: string, password: string) => Promise<void>;
-}
-
-export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
+const LoginForm = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
-    try {
-      if (isLogin) {
-        await onLogin(username, password);
+    // Simulate API call
+    setTimeout(() => {
+      if (username === "demo" && password === "password") {
+        alert(`${isLogin ? "Login" : "Registration"} successful!`);
       } else {
-        await onRegister(username, email, password);
+        setError(
+          'Invalid credentials. Try username: "demo", password: "password"',
+        );
       }
-    } catch (error: any) {
-      setError(error.message || 'An error occurred');
-    } finally {
       setLoading(false);
-    }
+    }, 1500);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white/10 backdrop-blur-xl border border-white/30 rounded-3xl p-8 w-full max-w-md shadow-2xl shadow-blue-500/10 hover:shadow-blue-500/20 transition-all duration-500"
-      >
+      <div className="bg-white/10 backdrop-blur-xl border border-white/30 rounded-3xl p-8 w-full max-w-md shadow-2xl shadow-blue-500/10 hover:shadow-blue-500/20 transition-all duration-500 animate-[fadeInScale_0.5s_ease-out_forwards]">
         {/* Header */}
         <div className="text-center mb-8">
-          <motion.div
-            className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-full mb-4"
-            animate={{ 
-              scale: [1, 1.05, 1],
-              rotate: [0, 5, -5, 0]
-            }}
-            transition={{ 
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-full mb-4 animate-[float_4s_ease-in-out_infinite]">
             <Brain className="w-8 h-8 text-blue-400" />
-          </motion.div>
+          </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
             Welcome to Neuro
           </h1>
           <p className="text-gray-400">
-            {isLogin ? 'Sign in to continue your cognitive journey' : 'Create your account to begin'}
+            {isLogin
+              ? "Sign in to continue your cognitive journey"
+              : "Create your account to begin"}
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm"
-            >
+            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm animate-[slideDown_0.3s_ease-out]">
               {error}
-            </motion.div>
+            </div>
           )}
 
           {/* Username */}
@@ -98,11 +73,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => 
 
           {/* Email (only for registration) */}
           {!isLogin && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
+            <div className="animate-[expand_0.3s_ease-out] overflow-hidden">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Email
               </label>
@@ -117,7 +88,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => 
                   required={!isLogin}
                 />
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Password */}
@@ -140,38 +111,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => 
           </div>
 
           {/* Submit Button */}
-          <motion.button
-            type="submit"
+          <button
+            onClick={handleSubmit}
             disabled={loading}
-            className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-semibold text-white transition-all duration-300 shadow-lg hover:shadow-blue-500/25 relative overflow-hidden group"
-            whileHover={{ scale: loading ? 1 : 1.02 }}
-            whileTap={{ scale: loading ? 1 : 0.98 }}
+            className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-semibold text-white transition-all duration-300 shadow-lg hover:shadow-blue-500/25 relative overflow-hidden group hover:scale-105 active:scale-95 transform"
           >
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              initial={false}
-            />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <span className="relative z-10 flex items-center justify-center space-x-2">
               {loading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                />
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
-                  <motion.span
-                    animate={{ x: [0, 4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                  >
+                  <span>{isLogin ? "Sign In" : "Create Account"}</span>
+                  <span className="animate-[arrow_1.5s_ease-in-out_infinite]">
                     →
-                  </motion.span>
+                  </span>
                 </>
               )}
             </span>
-          </motion.button>
-        </form>
+          </button>
+        </div>
 
         {/* Toggle Form Type */}
         <div className="mt-6 text-center">
@@ -179,17 +138,76 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => 
             {isLogin ? "Don't have an account?" : "Already have an account?"}
           </p>
           <button
-            type="button"
             onClick={() => {
               setIsLogin(!isLogin);
-              setError('');
+              setError("");
             }}
             className="mt-2 text-blue-400 hover:text-blue-300 font-medium transition-colors"
           >
-            {isLogin ? 'Create one here' : 'Sign in here'}
+            {isLogin ? "Create one here" : "Sign in here"}
           </button>
         </div>
-      </motion.div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fadeInScale {
+          from {
+            opacity: 0.8;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes float {
+          0%,
+          100% {
+            transform: scale(1) rotate(0deg);
+          }
+          25% {
+            transform: scale(1.05) rotate(5deg);
+          }
+          75% {
+            transform: scale(1.05) rotate(-5deg);
+          }
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes expand {
+          from {
+            opacity: 0;
+            max-height: 0;
+          }
+          to {
+            opacity: 1;
+            max-height: 200px;
+          }
+        }
+
+        @keyframes arrow {
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          50% {
+            transform: translateX(4px);
+          }
+        }
+      `}</style>
     </div>
   );
 };
+
+export default LoginForm;
