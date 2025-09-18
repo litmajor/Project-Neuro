@@ -1,0 +1,11 @@
+alembic>=1.16.5
+fastapi>=0.116.2
+openai>=1.108.0
+passlib[bcrypt]>=1.7.4
+psycopg2-binary>=2.9.10
+pydantic>=2.11.9
+python-jose[cryptography]>=3.5.0
+python-multipart>=0.0.20
+sqlalchemy>=2.0.43
+uvicorn>=0.35.0
+websockets>=15.0.1

@@ -1,53 +1,158 @@
-[Neuro v2 - Persistent Cognitive Agent]
-Neuro v2 is an interactive web-based chatbot designed to simulate an evolving, AI-powered cognitive agent. It engages in deep, reflective conversations, remembers past interactions across browser sessions, and evolves a unique set of "beliefs" based on the dialogue. The agent can operate in a local "Demo Mode" or connect to OpenAI's GPT-4 for enhanced conversational capabilities.
+# Neuro v2 - Persistent Cognitive Agent & Platform
 
-✨ Features
-Persistent Memory: Neuro v2 saves its entire cognitive state (memories, beliefs, mood) to the browser's local storage. You can close the tab and resume your conversation later.
+Neuro v2 is a full-stack, interactive cognitive agent platform. It features a modern web-based chatbot that simulates an evolving, AI-powered mind, with persistent memory, emotional intelligence, and a rich set of features for both users and developers. Neuro v2 now includes a robust backend, advanced frontend, and integration capabilities for real-world applications.
 
-Dual-Mode Operation:
+## ✨ Key Features
 
-Demo Mode: Uses a sophisticated set of built-in, context-aware responses without requiring any external services.
+### Cognitive Agent & Chatbot
 
-LLM-Connected Mode: Allows users to input their own OpenAI API key to unlock dynamic, generative responses from GPT-4.
+- **Persistent Memory:** Remembers all interactions, beliefs, and mood across browser sessions and server restarts.
 
-Evolving Personality: The agent analyzes conversational themes to form new "beliefs," which subtly influence its perspective and future responses.
+- **Dual-Mode Operation:**
+  - **Demo Mode:** Built-in, context-aware responses (no external API required).
+  - **LLM-Connected Mode:** Connects to OpenAI GPT-4 via user API key for generative, dynamic conversations.
 
-Cognitive State Dashboard: A real-time dashboard provides a transparent look into the agent's "mind," displaying its current mood, recent memories, and evolving beliefs.
+- **Evolving Personality:** Learns and adapts beliefs, mood, and conversational style based on ongoing dialogue.
 
-Emotional Analysis: The agent assigns an emotional score to user input, which is visualized in the chat and influences its internal mood (e.g., neutral, elevated, low).
+- **Emotional Analysis:** Assigns and visualizes emotional scores to user input, influencing agent mood and responses.
 
-Import/Export State: Users can download the agent's complete memory as a JSON file for backup or sharing, and upload a file to restore a previous state.
+- **Cognitive State Dashboard:** Real-time display of agent's mind, including mood, recent memories, and evolving beliefs.
 
-Modern, Responsive UI: The interface is clean, modern, and designed for a seamless user experience, featuring a typing indicator, message timestamps, and a collapsible settings panel.
+- **Import/Export State:** Download or upload the agent's full cognitive state (JSON) for backup, sharing, or restoration.
 
-🚀 How to Use
-Running the Application: Simply open the index.html file in any modern web browser (like Chrome, Firefox, or Edge). No web server is needed.
+- **Modern, Responsive UI:** Clean, mobile-friendly interface with typing indicator, timestamps, collapsible settings, and theme support.
 
-Starting a Conversation: Type a message in the input box and press "Send" or Enter. You can start conversing immediately in Demo Mode.
+### Full-Stack Platform
 
-Connecting to an LLM (Optional):
+- **Backend API (Python/FastAPI):**
+  - User authentication and session management
+  - Persistent database for chat logs, user profiles, and agent state
+  - RESTful endpoints for agent interaction, state management, and analytics
 
-Click the settings icon (⚙️) in the top-right corner.
+- **Frontend (React + TypeScript + Tailwind):**
+  - Rich chat interface with file upload, voice features, message reactions, and shared conversations
+  - Theme switching and accessibility options
+  - Real-time updates and dashboard integration
 
-Enter your OpenAI API key into the input field.
+- **Server Utilities (Node.js):**
+  - Database connectivity and utility scripts
 
-Click "Connect". The status indicator will change to "LLM CONNECTED".
+### Advanced Capabilities
 
-Managing the Agent: Use the buttons in the settings panel to Export or Import the agent's state, or to Reset its memory and start over.
+- **Multi-User Support:** Each user has a unique agent state and secure login
 
-🛠️ Technical Breakdown
-The project is built with vanilla HTML, CSS, and JavaScript, with no external dependencies. The core logic is encapsulated within several JavaScript classes:
+- **File Uploads:** Attach files to conversations for context or memory
 
-EnhancedCognitiveAgent: The main class that orchestrates the agent's functions. It handles perception, reflection, memory, and adaptation.
+- **Voice Features:** Speech-to-text and text-to-speech integration
 
-EnhancedLLMReflector: Manages the connection to the OpenAI API and generates both LLM-powered and demo responses.
+- **Message Reactions:** React to messages with emojis and feedback
 
-Supporting Classes:
+- **Shared Conversations:** Share and view conversations with other users
 
-MoodRegulator: Tracks and adjusts the agent's internal mood based on conversation.
+- **Theme Provider:** Switch between light/dark modes and custom themes
 
-ThemeTracker: Identifies and records the frequency of key themes.
+- **Asset Management:** Upload and serve images, files, and other assets
 
-KnowledgeGraph: Forms simple relationships between concepts discussed.
+## 🧩 Use Cases
 
-Persistence: The agent's state is serialized to JSON and saved to localStorage after each interaction, and loaded upon page initialization.
+- **Research & Experimentation:** Study cognitive agent behavior, memory, and adaptation in a controlled environment.
+- **Education:** Teach concepts of AI, memory, emotion, and personality in classrooms or workshops.
+- **Mental Health & Wellness:** Provide a safe, persistent conversational partner for journaling, mood tracking, or self-reflection.
+- **Creative Writing & Storytelling:** Collaborate with the agent to generate stories, characters, or world-building ideas.
+- **Customer Support & FAQ:** Deploy as a persistent, context-aware chatbot for user support and information retrieval.
+- **Team Collaboration:** Share conversations, files, and ideas among team members with persistent context.
+- **Personal Assistant:** Use as a memory-keeping, context-aware assistant for daily tasks and reminders.
+- **Plugin Platform:** Extend with custom skills, analytics, or integrations for specialized domains.
+
+## 🚀 How to Use
+
+### Local Demo (Frontend Only)
+
+1. Open `index.html` in any modern browser (Chrome, Firefox, Edge)
+
+2. Start chatting immediately in Demo Mode
+
+### Full Platform (Frontend + Backend)
+
+1. Start the backend server (`backend/main.py`) with Python (see `pyproject.toml` for dependencies)
+
+2. Start the frontend (React app in `frontend/`)
+
+3. Access the full dashboard, login, and advanced features
+
+### Connecting to GPT-4 (Optional)
+
+- Click the settings icon (⚙️) in the chat UI
+
+- Enter your OpenAI API key
+
+- Click "Connect" to enable LLM-powered responses
+
+### Managing Agent State
+
+- Use settings panel to Export/Import agent state
+
+- Reset memory to start fresh
+
+## 🛠️ Technical Breakdown
+
+### Backend (`backend/`)
+
+- **Python (FastAPI):** Auth, database, API endpoints
+
+- **Database:** Persistent storage for users, chat logs, agent state
+
+### Frontend (`frontend/`)
+
+- **React + TypeScript:** Main chat UI, dashboard, file upload, voice, reactions
+
+- **Tailwind CSS:** Modern, responsive design
+
+- **Vite:** Fast development/build tooling
+
+### Server (`server/`)
+
+- **Node.js:** Database utilities, server scripts
+
+### Core Agent Logic
+
+- **EnhancedCognitiveAgent:** Orchestrates perception, reflection, memory, adaptation
+
+- **EnhancedLLMReflector:** Manages OpenAI API connection and response generation
+
+- **MoodRegulator:** Tracks and adjusts agent mood
+
+- **ThemeTracker:** Identifies and records key conversational themes
+
+- **KnowledgeGraph:** Forms relationships between discussed concepts
+
+- **Persistence:** Serializes agent state to JSON/localStorage/database
+
+## 📁 Project Structure
+
+- `backend/` - Python FastAPI backend
+- `frontend/` - React/TypeScript frontend
+- `server/` - Node.js utilities
+- `attached_assets/` - Uploaded files and assets
+- `index.html` - Standalone demo
+
+## 📚 Documentation & Setup
+
+- See `LOCAL_SETUP.md` for local installation and development
+- See `replit.md` for Replit cloud setup
+- See `Readme` for feature overview
+
+## 🧑‍💻 Contributing
+
+Pull requests and issues are welcome! See the frontend and backend folders for modular code and extension points.
+
+## 🏁 Roadmap
+
+- Multi-agent support
+- Advanced analytics dashboard
+- Plugin system for custom agent skills
+- More LLM integrations
+
+---
+
+Neuro v2 is a next-generation cognitive agent platform for research, education, and creative applications. Try it out, extend it, and help shape the future of AI-powered conversation!
