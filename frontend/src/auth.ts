@@ -18,7 +18,12 @@ export interface AuthToken {
 
 const isLocal = window.location.hostname === 'localhost';
 const host = window.location.host;
-const API_BASE = isLocal ? 'localhost:8000' : host.replace(/^\d+-/, '8000-');
+// For Replit: if we're on a Replit domain, construct the backend URL properly
+const API_BASE = isLocal 
+  ? 'localhost:8000' 
+  : host.includes('replit.dev') || host.includes('replit.app')
+    ? host.replace(/^[^-]+-/, '8000-') // Replace the port prefix
+    : 'localhost:8000';
 const API_PROTOCOL = isLocal ? 'http' : 'https';
 
 export class AuthService {
@@ -37,41 +42,90 @@ export class AuthService {
   }
 
   async register(username: string, email: string, password: string): Promise<AuthToken> {
-    const response = await fetch(`${API_PROTOCOL}://${API_BASE}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, email, password }),
-    });
+    const url = `${API_PROTOCOL}://${API_BASE}/api/auth/register`;
+    console.log('🔗 Registration URL:', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Registration failed');
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Registration failed');
+        } else {
+          const text = await response.text();
+          console.error('❌ Non-JSON error response:', text);
+          throw new Error(`Registration failed: ${response.status} ${response.statusText}`);
+        }
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Expected JSON response but got:', text);
+        throw new Error('Invalid response format from server');
+      }
+
+      const authData: AuthToken = await response.json();
+      this.setAuth(authData);
+      return authData;
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+      throw error;
     }
-
-    const authData: AuthToken = await response.json();
-    this.setAuth(authData);
-    return authData;
   }
 
   async login(username: string, password: string): Promise<AuthToken> {
-    const response = await fetch(`${API_PROTOCOL}://${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
+    const url = `${API_PROTOCOL}://${API_BASE}/api/auth/login`;
+    console.log('🔗 Login URL:', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Login failed');
+      console.log('📡 Response status:', response.status);
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Login failed');
+        } else {
+          const text = await response.text();
+          console.error('❌ Non-JSON error response:', text);
+          throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+        }
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Expected JSON response but got:', text);
+        throw new Error('Invalid response format from server');
+      }
+
+      const authData: AuthToken = await response.json();
+      this.setAuth(authData);
+      return authData;
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      throw error;
     }
-
-    const authData: AuthToken = await response.json();
-    this.setAuth(authData);
-    return authData;
   }
 
   async updatePersonality(personality: Record<string, number>, mood: string, energy: number): Promise<User> {

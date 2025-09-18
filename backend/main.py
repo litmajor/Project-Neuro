@@ -513,7 +513,13 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Configure CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5000", "https://*.replit.dev", "https://*.replit.app"],
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:5000", 
+        "https://*.replit.dev", 
+        "https://*.replit.app",
+        "*"  # Allow all origins for development
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
