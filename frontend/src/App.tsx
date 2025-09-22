@@ -377,6 +377,41 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Test contradiction detection
+  const testContradictionDetection = async (testMessage: string) => {
+    try {
+      const isLocal = window.location.hostname === 'localhost';
+      const host = window.location.host;
+      const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
+      const protocol = isLocal ? 'http' : 'https';
+      
+      const response = await fetch(`${protocol}://${backendHost}/api/contradiction-detection/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ message: testMessage })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔍 Contradiction Detection Test Result:', result);
+        
+        // Add a test message showing the contradiction detection capabilities
+        const testResultMessage: Message = {
+          id: `contradiction_test_${Date.now()}`,
+          role: 'assistant',
+          content: `🔍 **Contradiction Detection Test**\n\n**Contradictions Found:** ${result.contradictions.length}\n${result.contradictions.map((cont: any) => `- ${cont.type}: ${cont.gentle_response}`).join('\n')}\n\n**Cognitive Distortions:** ${result.cognitive_distortions.length}\n${result.cognitive_distortions.map((dist: any) => `- ${dist.type}: ${dist.gentle_response}`).join('\n')}\n\n**Growth Patterns:** ${result.growth_patterns.length}\n${result.growth_patterns.map((growth: any) => `- ${growth.type}: ${growth.encouragement_response}`).join('\n')}`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, testResultMessage]);
+      }
+    } catch (error) {
+      console.error('Error testing contradiction detection:', error);
+    }
+  };
+
   // Get mood color based on cognitive state
   const getMoodColor = (mood: string) => {
     switch (mood) {
@@ -823,6 +858,90 @@ const AppContent: React.FC = () => {
               <div className="text-sm text-gray-400">Stored interactions</div>
             </div>
           </motion.div>
+
+          {/* Contradiction Detection Panel */}
+          {cognitiveState.contradictions_detected && cognitiveState.contradictions_detected.length > 0 && (
+            <motion.div
+              className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <h3 className="font-semibold mb-3 flex items-center space-x-2">
+                <Brain className="w-4 h-4 text-yellow-400" />
+                <span>Self-Perception Insights</span>
+              </h3>
+              <div className="space-y-2">
+                {cognitiveState.contradictions_detected.map((contradiction, index) => (
+                  <div key={index} className="bg-yellow-400/20 rounded-lg p-3">
+                    <div className="text-sm font-medium text-yellow-400 mb-1">
+                      Pattern Noticed
+                    </div>
+                    <div className="text-xs text-yellow-300">
+                      {contradiction.gentle_response}
+                    </div>
+                    <div className="text-xs text-yellow-200 mt-1 opacity-70">
+                      Confidence: {Math.round(contradiction.confidence * 100)}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Cognitive Distortion Detection */}
+          {cognitiveState.cognitive_distortions && cognitiveState.cognitive_distortions.length > 0 && (
+            <motion.div
+              className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <h3 className="font-semibold mb-3 flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-orange-400" />
+                <span>Thinking Patterns</span>
+              </h3>
+              <div className="space-y-2">
+                {cognitiveState.cognitive_distortions.map((distortion, index) => (
+                  <div key={index} className="bg-orange-400/20 rounded-lg p-3">
+                    <div className="text-sm font-medium text-orange-400 mb-1">
+                      {distortion.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </div>
+                    <div className="text-xs text-orange-300">
+                      {distortion.gentle_response}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Growth Recognition */}
+          {cognitiveState.growth_patterns && cognitiveState.growth_patterns.length > 0 && (
+            <motion.div
+              className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <h3 className="font-semibold mb-3 flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-green-400" />
+                <span>Growth Detected! 🌱</span>
+              </h3>
+              <div className="space-y-2">
+                {cognitiveState.growth_patterns.map((growth, index) => (
+                  <div key={index} className="bg-green-400/20 rounded-lg p-3">
+                    <div className="text-sm font-medium text-green-400 mb-1">
+                      {growth.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </div>
+                    <div className="text-xs text-green-300">
+                      {growth.encouragement_response}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           {/* Mental Health Panel */}
           {showMentalHealthPanel && mentalHealthData && (

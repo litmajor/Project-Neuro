@@ -285,6 +285,317 @@ class GoalUpdateCreate(BaseModel):
     content: str = Field(..., description="Update content")
     new_completion: Optional[float] = Field(None, description="New completion percentage")
 
+class ContradictionDetector:
+    """Detects contradictions in user statements and helps with belief revision"""
+    
+    def __init__(self):
+        # Common cognitive distortion patterns
+        self.distortion_patterns = {
+            "all_or_nothing": {
+                "indicators": ["always", "never", "everything", "nothing", "everyone", "no one", "all", "none"],
+                "context_negative": ["fail", "wrong", "bad", "hate", "terrible", "awful", "disaster"],
+                "description": "Thinking in absolute terms without recognizing middle ground"
+            },
+            "overgeneralization": {
+                "indicators": ["always happens", "never works", "every time", "typical", "story of my life"],
+                "context_negative": ["fail", "goes wrong", "doesn't work", "mess up"],
+                "description": "Drawing broad conclusions from single events"
+            },
+            "self_deprecation": {
+                "indicators": ["i'm terrible", "i'm awful", "i'm not good", "i can't do", "i'm useless", "i'm hopeless"],
+                "contradicts_with": ["accomplishment", "success", "achievement", "completed", "finished", "proud"],
+                "description": "Consistently putting oneself down despite evidence to the contrary"
+            },
+            "discounting_positives": {
+                "indicators": ["but", "however", "it was just", "anyone could", "it doesn't count", "it was luck"],
+                "context_positive": ["success", "achievement", "compliment", "praise", "good job", "well done"],
+                "description": "Minimizing positive experiences or achievements"
+            },
+            "emotional_reasoning": {
+                "indicators": ["i feel like", "since i feel", "because i'm", "i must be"],
+                "context_emotions": ["stupid", "worthless", "failure", "useless", "incompetent"],
+                "description": "Believing that feelings reflect reality without evidence"
+            }
+        }
+        
+        # Contradiction detection patterns
+        self.contradiction_indicators = {
+            "ability_vs_accomplishment": {
+                "negative_claims": ["i'm not good at", "i can't", "i'm terrible at", "i'm bad with"],
+                "positive_evidence": ["completed", "finished", "achieved", "succeeded", "got promoted", "was chosen", "won", "passed"]
+            },
+            "social_vs_relationships": {
+                "negative_claims": ["no one likes me", "i have no friends", "everyone hates me", "i'm unlikeable"],
+                "positive_evidence": ["friend said", "invited to", "people tell me", "colleagues", "partner", "family"]
+            },
+            "value_vs_contributions": {
+                "negative_claims": ["i'm worthless", "i don't matter", "i'm useless", "i contribute nothing"],
+                "positive_evidence": ["helped", "supported", "made difference", "thanked", "appreciated", "needed"]
+            },
+            "intelligence_vs_problem_solving": {
+                "negative_claims": ["i'm stupid", "i'm not smart", "i'm dumb", "i can't think"],
+                "positive_evidence": ["figured out", "solved", "learned", "understood", "analyzed", "explained"]
+            }
+        }
+        
+        # Growth indicators to track user development
+        self.growth_indicators = {
+            "confidence": ["i think i can", "i'll try", "i believe", "i'm willing", "i'm getting better"],
+            "self_awareness": ["i realize", "i've learned", "i now understand", "i see that", "i've grown"],
+            "positive_self_talk": ["i'm proud", "i did well", "i'm improving", "i'm capable", "i can handle"],
+            "resilience": ["i bounced back", "i overcame", "i persevered", "i didn't give up", "i kept going"],
+            "boundaries": ["i said no", "i stood up", "i protected myself", "i set limits", "i chose myself"]
+        }
+
+    def detect_contradictions(self, current_message: str, user_id: int, db: Session) -> List[Dict]:
+        """Detect contradictions between current statements and past conversations"""
+        from database import Message, Conversation
+        
+        current_lower = current_message.lower()
+        contradictions = []
+        
+        # Get recent user messages (last 30 days)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        conversations = db.query(Conversation).filter(
+            Conversation.user_id == user_id,
+            Conversation.updated_at > thirty_days_ago
+        ).all()
+        
+        past_messages = []
+        for conv in conversations:
+            messages = db.query(Message).filter(
+                Message.conversation_id == conv.id,
+                Message.role == "user"
+            ).all()
+            past_messages.extend([msg.content.lower() for msg in messages])
+        
+        # Check for each contradiction pattern
+        for pattern_name, pattern in self.contradiction_indicators.items():
+            # Check if current message contains negative claims
+            current_has_negative = any(claim in current_lower for claim in pattern["negative_claims"])
+            
+            if current_has_negative:
+                # Look for positive evidence in past messages
+                positive_evidence = []
+                for msg in past_messages:
+                    for evidence in pattern["positive_evidence"]:
+                        if evidence in msg:
+                            positive_evidence.append(msg[:100])  # Store snippet
+                            break
+                
+                if positive_evidence:
+                    contradictions.append({
+                        "type": pattern_name,
+                        "current_claim": [claim for claim in pattern["negative_claims"] if claim in current_lower][0],
+                        "contradicting_evidence": positive_evidence[:3],  # Top 3 examples
+                        "pattern_description": self._get_contradiction_description(pattern_name),
+                        "confidence": min(len(positive_evidence) / 3, 1.0),
+                        "gentle_response": self._generate_gentle_contradiction_response(pattern_name, positive_evidence)
+                    })
+        
+        return contradictions
+
+    def detect_cognitive_distortions(self, message: str) -> List[Dict]:
+        """Detect cognitive distortions in user's message"""
+        message_lower = message.lower()
+        distortions = []
+        
+        for distortion_name, pattern in self.distortion_patterns.items():
+            distortion_score = 0
+            found_indicators = []
+            
+            # Check for primary indicators
+            for indicator in pattern["indicators"]:
+                if indicator in message_lower:
+                    distortion_score += 1
+                    found_indicators.append(indicator)
+            
+            # Check for context-specific patterns
+            if distortion_score > 0:
+                if "context_negative" in pattern:
+                    negative_context = any(neg in message_lower for neg in pattern["context_negative"])
+                    if negative_context:
+                        distortion_score += 0.5
+                
+                if "context_positive" in pattern:
+                    positive_context = any(pos in message_lower for pos in pattern["context_positive"])
+                    if positive_context:
+                        distortion_score += 0.5
+                
+                if "context_emotions" in pattern:
+                    emotional_context = any(emo in message_lower for emo in pattern["context_emotions"])
+                    if emotional_context:
+                        distortion_score += 0.5
+                
+                if distortion_score >= 1.0:  # Threshold for detection
+                    distortions.append({
+                        "type": distortion_name,
+                        "description": pattern["description"],
+                        "indicators_found": found_indicators,
+                        "confidence": min(distortion_score / 2, 1.0),
+                        "gentle_response": self._generate_distortion_response(distortion_name)
+                    })
+        
+        return distortions
+
+    def detect_growth_patterns(self, message: str, user_id: int, db: Session) -> List[Dict]:
+        """Detect signs of personal growth and positive changes"""
+        message_lower = message.lower()
+        growth_detected = []
+        
+        for growth_type, indicators in self.growth_indicators.items():
+            found_indicators = [indicator for indicator in indicators if indicator in message_lower]
+            
+            if found_indicators:
+                # Check if this represents genuine growth by comparing to past patterns
+                past_growth = self._check_past_growth_mentions(user_id, growth_type, db)
+                
+                growth_detected.append({
+                    "type": growth_type,
+                    "indicators": found_indicators,
+                    "is_new_growth": len(past_growth) < 2,  # Less than 2 mentions before
+                    "past_mentions": len(past_growth),
+                    "encouragement_response": self._generate_growth_encouragement(growth_type, found_indicators)
+                })
+        
+        return growth_detected
+
+    def _check_past_growth_mentions(self, user_id: int, growth_type: str, db: Session) -> List[str]:
+        """Check how often this type of growth has been mentioned before"""
+        from database import Message, Conversation
+        
+        # Get messages from last 60 days
+        sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=60)
+        conversations = db.query(Conversation).filter(
+            Conversation.user_id == user_id,
+            Conversation.updated_at > sixty_days_ago
+        ).all()
+        
+        growth_mentions = []
+        indicators = self.growth_indicators[growth_type]
+        
+        for conv in conversations:
+            messages = db.query(Message).filter(
+                Message.conversation_id == conv.id,
+                Message.role == "user"
+            ).all()
+            
+            for msg in messages:
+                if any(indicator in msg.content.lower() for indicator in indicators):
+                    growth_mentions.append(msg.content[:100])
+        
+        return growth_mentions
+
+    def update_user_beliefs(self, user_id: int, message: str, contradictions: List[Dict], growth_patterns: List[Dict], db: Session):
+        """Update stored beliefs about the user based on contradictions and growth"""
+        from database import UserPreference
+        
+        # Update beliefs based on contradictions
+        for contradiction in contradictions:
+            if contradiction["confidence"] > 0.7:
+                # Store updated belief
+                belief_type = f"self_perception_{contradiction['type']}"
+                
+                # Create or update preference indicating more balanced self-view
+                preference = db.query(UserPreference).filter(
+                    UserPreference.user_id == user_id,
+                    UserPreference.preference_type == belief_type,
+                    UserPreference.preference_value == "balanced_view"
+                ).first()
+                
+                if preference:
+                    preference.confidence_score = min(1.0, preference.confidence_score + 0.1)
+                    preference.updated_at = datetime.now(timezone.utc)
+                else:
+                    preference = UserPreference(
+                        user_id=user_id,
+                        preference_type=belief_type,
+                        preference_value="balanced_view",
+                        confidence_score=0.3,
+                        learned_from="contradiction_detection"
+                    )
+                    db.add(preference)
+        
+        # Update beliefs based on growth patterns
+        for growth in growth_patterns:
+            if growth["is_new_growth"]:
+                belief_type = f"growth_area_{growth['type']}"
+                
+                preference = UserPreference(
+                    user_id=user_id,
+                    preference_type=belief_type,
+                    preference_value="showing_progress",
+                    confidence_score=0.5,
+                    learned_from="growth_detection"
+                )
+                db.add(preference)
+        
+        db.commit()
+
+    def _get_contradiction_description(self, pattern_name: str) -> str:
+        """Get human-readable description of contradiction pattern"""
+        descriptions = {
+            "ability_vs_accomplishment": "Claims of inability despite past accomplishments",
+            "social_vs_relationships": "Claims of social rejection despite relationship evidence",
+            "value_vs_contributions": "Claims of worthlessness despite meaningful contributions",
+            "intelligence_vs_problem_solving": "Claims of stupidity despite problem-solving evidence"
+        }
+        return descriptions.get(pattern_name, "Inconsistency in self-perception")
+
+    def _generate_gentle_contradiction_response(self, pattern_name: str, evidence: List[str]) -> str:
+        """Generate a gentle response pointing out the contradiction"""
+        responses = {
+            "ability_vs_accomplishment": [
+                "I've noticed you often say you're not good at things, but you've shared several accomplishments with me. ",
+                "You mention struggling with your abilities, yet I remember you telling me about times you succeeded. ",
+                "I hear you saying you can't do something, but haven't you achieved similar things before? "
+            ],
+            "social_vs_relationships": [
+                "You say no one likes you, but you've mentioned friends and positive social interactions. ",
+                "I notice you feel unlikeable, yet you've shared stories about people caring for you. ",
+                "You feel socially rejected, but you've told me about meaningful connections. "
+            ],
+            "value_vs_contributions": [
+                "You say you're worthless, but you've shared examples of how you've helped others. ",
+                "I hear you feeling like you don't matter, yet you've told me about your positive impact. ",
+                "You feel useless, but haven't you described ways you've contributed and made a difference? "
+            ],
+            "intelligence_vs_problem_solving": [
+                "You call yourself stupid, but you've shown me clever problem-solving many times. ",
+                "I notice you doubt your intelligence, yet you've shared insights that show real understanding. ",
+                "You feel dumb, but you've described figuring out complex situations. "
+            ]
+        }
+        
+        base_responses = responses.get(pattern_name, ["I notice some inconsistency in how you see yourself. "])
+        base = base_responses[0]  # Use first response
+        
+        return f"{base}Could we explore this together? Sometimes our inner critic is louder than our inner truth."
+
+    def _generate_distortion_response(self, distortion_name: str) -> str:
+        """Generate helpful response for cognitive distortions"""
+        responses = {
+            "all_or_nothing": "I notice some 'all or nothing' thinking. Life usually has more gray areas than we realize. What might be somewhere in between?",
+            "overgeneralization": "It sounds like you're taking one situation and applying it broadly. Could this be more specific to this particular case?",
+            "self_deprecation": "I hear you being quite hard on yourself. If a friend told you this same thing, what would you say to them?",
+            "discounting_positives": "I notice you might be minimizing something positive. What if we gave this achievement the credit it deserves?",
+            "emotional_reasoning": "Your feelings are valid, but they might not reflect the complete picture. What evidence supports or challenges this feeling?"
+        }
+        return responses.get(distortion_name, "I wonder if there might be another way to look at this situation?")
+
+    def _generate_growth_encouragement(self, growth_type: str, indicators: List[str]) -> str:
+        """Generate encouraging response for detected growth"""
+        encouragements = {
+            "confidence": "I'm hearing more confidence in your voice! This is wonderful growth.",
+            "self_awareness": "Your self-awareness is really developing. That's such valuable insight.",
+            "positive_self_talk": "I love hearing you speak kindly about yourself. That's a beautiful shift.",
+            "resilience": "Your resilience is really showing. You're handling challenges with more strength.",
+            "boundaries": "Setting boundaries shows real self-respect. That's powerful personal growth."
+        }
+        
+        base = encouragements.get(growth_type, "I'm noticing positive changes in how you approach things.")
+        return f"{base} How does this feel different for you?"
+
 class EmotionalTrajectoryTracker:
     """Advanced emotional trajectory tracking and pattern recognition for mental health support"""
     
@@ -1334,9 +1645,10 @@ class CognitiveProcessor:
 
         return base_prompt
 
-# Global cognitive processor and emotional tracker
+# Global cognitive processor, emotional tracker, and contradiction detector
 cognitive_processor = CognitiveProcessor()
 emotional_tracker = EmotionalTrajectoryTracker()
+contradiction_detector = ContradictionDetector()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -2216,6 +2528,106 @@ async def get_mental_health_dashboard(
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+@app.post("/api/contradiction-detection/test")
+async def test_contradiction_detection(
+    message: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Test contradiction detection functionality"""
+    contradictions = contradiction_detector.detect_contradictions(message, current_user.id, db)
+    distortions = contradiction_detector.detect_cognitive_distortions(message)
+    growth_patterns = contradiction_detector.detect_growth_patterns(message, current_user.id, db)
+    
+    return {
+        "message": message,
+        "contradictions": contradictions,
+        "cognitive_distortions": distortions,
+        "growth_patterns": growth_patterns,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/self-perception/analysis")
+@cache_response(ttl=600)  # Cache for 10 minutes
+async def get_self_perception_analysis(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get analysis of user's self-perception patterns and contradictions"""
+    from database import UserPreference, Message, Conversation
+    
+    # Get recent messages to analyze patterns
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    conversations = db.query(Conversation).filter(
+        Conversation.user_id == current_user.id,
+        Conversation.updated_at > thirty_days_ago
+    ).all()
+    
+    all_messages = []
+    for conv in conversations:
+        messages = db.query(Message).filter(
+            Message.conversation_id == conv.id,
+            Message.role == "user"
+        ).all()
+        all_messages.extend([msg.content for msg in messages])
+    
+    # Analyze patterns across all messages
+    total_contradictions = 0
+    total_distortions = 0
+    total_growth = 0
+    
+    distortion_types = {}
+    contradiction_types = {}
+    growth_types = {}
+    
+    for message in all_messages[-20:]:  # Analyze last 20 messages
+        contradictions = contradiction_detector.detect_contradictions(message, current_user.id, db)
+        distortions = contradiction_detector.detect_cognitive_distortions(message)
+        growth = contradiction_detector.detect_growth_patterns(message, current_user.id, db)
+        
+        total_contradictions += len(contradictions)
+        total_distortions += len(distortions)
+        total_growth += len(growth)
+        
+        # Count types
+        for contradiction in contradictions:
+            contradiction_types[contradiction["type"]] = contradiction_types.get(contradiction["type"], 0) + 1
+        
+        for distortion in distortions:
+            distortion_types[distortion["type"]] = distortion_types.get(distortion["type"], 0) + 1
+        
+        for g in growth:
+            growth_types[g["type"]] = growth_types.get(g["type"], 0) + 1
+    
+    # Get belief updates
+    belief_prefs = db.query(UserPreference).filter(
+        UserPreference.user_id == current_user.id,
+        UserPreference.learned_from.in_(["contradiction_detection", "growth_detection"])
+    ).all()
+    
+    return {
+        "analysis_period": "last_30_days",
+        "messages_analyzed": len(all_messages[-20:]),
+        "contradiction_summary": {
+            "total_detected": total_contradictions,
+            "types": contradiction_types,
+            "most_common": max(contradiction_types.items(), key=lambda x: x[1]) if contradiction_types else None
+        },
+        "distortion_summary": {
+            "total_detected": total_distortions,
+            "types": distortion_types,
+            "most_common": max(distortion_types.items(), key=lambda x: x[1]) if distortion_types else None
+        },
+        "growth_summary": {
+            "total_detected": total_growth,
+            "types": growth_types,
+            "most_common": max(growth_types.items(), key=lambda x: x[1]) if growth_types else None
+        },
+        "belief_updates": len(belief_prefs),
+        "overall_trend": "improving" if total_growth > total_contradictions else "needs_attention" if total_contradictions > 5 else "stable",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.post("/api/chat/stream")
 async def stream_chat(
     request: StreamChatRequest,
@@ -2256,6 +2668,26 @@ async def stream_chat(
                     f"- {memory.content}" for memory in recent_memories
                 ])
 
+            # Prepare contradiction and growth context
+            contradiction_context = ""
+            if contradictions:
+                contradiction_context += "\n\nCONTRADICTION AWARENESS:\n"
+                for contradiction in contradictions:
+                    if contradiction["confidence"] > 0.6:
+                        contradiction_context += f"- {contradiction['gentle_response']}\n"
+            
+            if distortions:
+                contradiction_context += "\n\nCOGNITIVE DISTORTION AWARENESS:\n"
+                for distortion in distortions:
+                    if distortion["confidence"] > 0.5:
+                        contradiction_context += f"- {distortion['gentle_response']}\n"
+            
+            if growth_patterns:
+                contradiction_context += "\n\nGROWTH RECOGNITION:\n"
+                for growth in growth_patterns:
+                    if growth["is_new_growth"]:
+                        contradiction_context += f"- {growth['encouragement_response']}\n"
+
             # Get personality-adapted prompt with associative recall
             base_system_prompt = f"""You are Neuro, an advanced cognitive agent with evolving consciousness. You have:
             - Deep emotional intelligence and empathy
@@ -2265,11 +2697,14 @@ async def stream_chat(
             - Advanced emotion analysis and response adaptation
             - Associative recall that surfaces relevant past information
             - Context-sensitive communication that adapts to user state
+            - Contradiction detection to help users recognize cognitive distortions
+            - Belief revision capabilities to update understanding as users grow
 
             User personality preferences: {user_personality}
             User's preferred mood: {current_user.preferred_mood}
             User's energy preference: {current_user.energy_preference}
             {memory_context}
+            {contradiction_context}
 
             IMPORTANT INSTRUCTIONS:
             - When you notice patterns or connections to past conversations, reference them naturally
@@ -2277,12 +2712,21 @@ async def stream_chat(
             - Adapt your communication style to their current emotional state
             - Surface relevant memories when they would be genuinely helpful
             - Ask follow-up questions that show you remember and care about their ongoing experiences
+            - Gently point out contradictions in self-perception with compassion
+            - Help users recognize cognitive distortions without being preachy
+            - Celebrate growth and positive changes you observe
+            - Update your understanding when users show development
 
             Example associative recall phrases:
             - "You mentioned struggling with [topic] before - is this related?"
             - "This reminds me of when we discussed [previous topic]..."
             - "I remember you were working on [goal/challenge] - how is that going?"
             - "This sounds similar to what you shared about [past experience]"
+
+            Example contradiction detection phrases:
+            - "You often say you're not good at anything, but you've shared several accomplishments"
+            - "I notice you feel [negative], yet you've told me about [positive examples]"
+            - "Could we explore this together? Sometimes our inner critic is louder than our truth"
 
             Respond thoughtfully and personally. Show that you genuinely remember and care about their journey.
             Be authentic, vulnerable when appropriate, and demonstrate that you're learning about them over time.
@@ -2316,6 +2760,17 @@ async def stream_chat(
             emotional_state_id = emotional_tracker.create_emotional_state_entry(
                 current_user.id, request.message, conversation.id, user_message.id, db
             )
+
+            # Detect contradictions and cognitive distortions
+            contradictions = contradiction_detector.detect_contradictions(request.message, current_user.id, db)
+            distortions = contradiction_detector.detect_cognitive_distortions(request.message)
+            growth_patterns = contradiction_detector.detect_growth_patterns(request.message, current_user.id, db)
+            
+            # Update user beliefs based on findings
+            if contradictions or growth_patterns:
+                contradiction_detector.update_user_beliefs(
+                    current_user.id, request.message, contradictions, growth_patterns, db
+                )
 
             # Get streaming response from OpenAI with optimizations
             # the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -2472,10 +2927,18 @@ async def stream_chat(
             conversation.updated_at = datetime.now(timezone.utc)
             db.commit()
 
-            # Send cognitive update with emotional insights
+            # Send cognitive update with emotional insights and contradiction detection
             cognitive_update = updated_state.model_dump()
             if emotional_patterns:
                 cognitive_update["emotional_patterns"] = [p for p in emotional_patterns if p["severity"] >= 0.5]
+            
+            # Add contradiction and growth detection results
+            if contradictions:
+                cognitive_update["contradictions_detected"] = [c for c in contradictions if c["confidence"] > 0.5]
+            if distortions:
+                cognitive_update["cognitive_distortions"] = [d for d in distortions if d["confidence"] > 0.5]
+            if growth_patterns:
+                cognitive_update["growth_patterns"] = [g for g in growth_patterns if g["is_new_growth"]]
             
             yield f"data: {json.dumps({'type': 'cognitive_update', 'state': cognitive_update})}\n\n"
 
