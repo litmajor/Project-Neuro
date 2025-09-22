@@ -285,6 +285,392 @@ class GoalUpdateCreate(BaseModel):
     content: str = Field(..., description="Update content")
     new_completion: Optional[float] = Field(None, description="New completion percentage")
 
+class EmotionalTrajectoryTracker:
+    """Advanced emotional trajectory tracking and pattern recognition for mental health support"""
+    
+    def __init__(self):
+        # Enhanced emotional analysis
+        self.emotion_categories = {
+            "anxiety": ["anxious", "worried", "nervous", "stressed", "overwhelmed", "panic", "tense", "uneasy"],
+            "depression": ["sad", "depressed", "hopeless", "empty", "worthless", "lonely", "numb", "despair"],
+            "anger": ["angry", "frustrated", "irritated", "furious", "rage", "annoyed", "bitter", "resentful"],
+            "joy": ["happy", "joyful", "excited", "elated", "cheerful", "content", "delighted", "euphoric"],
+            "fear": ["scared", "afraid", "terrified", "fearful", "paranoid", "phobic", "dread", "alarmed"],
+            "disgust": ["disgusted", "revolted", "repulsed", "sickened", "appalled", "nauseated"],
+            "surprise": ["surprised", "shocked", "amazed", "astonished", "stunned", "bewildered"],
+            "shame": ["ashamed", "guilty", "embarrassed", "humiliated", "mortified", "regretful"],
+            "love": ["love", "affection", "caring", "compassionate", "tender", "devoted", "adoring"],
+            "hope": ["hopeful", "optimistic", "confident", "encouraged", "positive", "motivated"],
+            "calm": ["calm", "peaceful", "relaxed", "serene", "tranquil", "composed", "centered"],
+            "confusion": ["confused", "puzzled", "uncertain", "lost", "unclear", "bewildered", "perplexed"]
+        }
+        
+        # Mental health warning indicators
+        self.warning_patterns = {
+            "escalating_distress": {
+                "emotions": ["anxious", "overwhelmed", "stressed", "panicked"],
+                "frequency_threshold": 3,  # mentions in 7 days
+                "severity_threshold": 0.7
+            },
+            "persistent_sadness": {
+                "emotions": ["sad", "depressed", "hopeless", "empty", "worthless"],
+                "frequency_threshold": 5,  # mentions in 14 days
+                "severity_threshold": 0.6
+            },
+            "isolation_indicators": {
+                "emotions": ["lonely", "isolated", "disconnected", "alone"],
+                "frequency_threshold": 3,  # mentions in 7 days
+                "severity_threshold": 0.5
+            },
+            "anger_escalation": {
+                "emotions": ["angry", "furious", "rage", "hatred"],
+                "frequency_threshold": 4,  # mentions in 7 days
+                "severity_threshold": 0.8
+            },
+            "self_harm_ideation": {
+                "keywords": ["hurt myself", "end it all", "not worth living", "give up", "can't go on"],
+                "frequency_threshold": 1,  # immediate attention
+                "severity_threshold": 0.9
+            }
+        }
+        
+        # Helpful intervention topics by emotional state
+        self.helpful_interventions = {
+            "anxiety": ["breathing exercises", "mindfulness", "grounding techniques", "relaxation", "stress management"],
+            "depression": ["self-care", "positive activities", "social connection", "professional help", "routine building"],
+            "anger": ["anger management", "cooling down", "communication skills", "conflict resolution", "stress relief"],
+            "overwhelmed": ["time management", "prioritization", "breaking tasks down", "delegation", "boundaries"],
+            "lonely": ["social activities", "community", "reaching out", "support groups", "friendship"]
+        }
+        
+        # Topics to avoid or handle carefully
+        self.sensitive_topics = {
+            "avoid_when_depressed": ["major life decisions", "productivity pressure", "comparison with others"],
+            "avoid_when_anxious": ["worst-case scenarios", "uncertainty", "overwhelming information"],
+            "handle_carefully": ["relationship breakups", "job loss", "family conflict", "health issues", "financial stress"]
+        }
+
+    def analyze_emotional_trajectory(self, user_id: int, db: Session, days_back: int = 30) -> Dict:
+        """Analyze user's emotional trajectory over time"""
+        from database import EmotionalState
+        
+        # Get emotional states from the specified period
+        since_date = datetime.now(timezone.utc) - timedelta(days=days_back)
+        emotional_states = db.query(EmotionalState).filter(
+            EmotionalState.user_id == user_id,
+            EmotionalState.detected_at >= since_date
+        ).order_by(EmotionalState.detected_at.asc()).all()
+        
+        if not emotional_states:
+            return {"status": "insufficient_data", "message": "Not enough emotional data to analyze trajectory"}
+        
+        # Calculate trajectory metrics
+        trajectory_data = []
+        emotion_frequencies = {}
+        intensity_over_time = []
+        valence_over_time = []
+        
+        for state in emotional_states:
+            trajectory_data.append({
+                "date": state.detected_at,
+                "emotion": state.primary_emotion,
+                "intensity": state.emotional_intensity,
+                "valence": state.valence,
+                "arousal": state.arousal
+            })
+            
+            # Count emotion frequencies
+            emotion_frequencies[state.primary_emotion] = emotion_frequencies.get(state.primary_emotion, 0) + 1
+            intensity_over_time.append(state.emotional_intensity)
+            valence_over_time.append(state.valence)
+        
+        # Calculate trends
+        avg_intensity = sum(intensity_over_time) / len(intensity_over_time)
+        avg_valence = sum(valence_over_time) / len(valence_over_time)
+        
+        # Detect intensity trend (increasing/decreasing)
+        if len(intensity_over_time) >= 5:
+            recent_intensity = sum(intensity_over_time[-5:]) / 5
+            older_intensity = sum(intensity_over_time[:5]) / 5
+            intensity_trend = "increasing" if recent_intensity > older_intensity + 0.1 else "decreasing" if recent_intensity < older_intensity - 0.1 else "stable"
+        else:
+            intensity_trend = "stable"
+        
+        # Detect valence trend
+        if len(valence_over_time) >= 5:
+            recent_valence = sum(valence_over_time[-5:]) / 5
+            older_valence = sum(valence_over_time[:5]) / 5
+            valence_trend = "improving" if recent_valence > older_valence + 0.1 else "declining" if recent_valence < older_valence - 0.1 else "stable"
+        else:
+            valence_trend = "stable"
+        
+        return {
+            "trajectory_data": trajectory_data,
+            "emotion_frequencies": emotion_frequencies,
+            "avg_intensity": avg_intensity,
+            "avg_valence": avg_valence,
+            "intensity_trend": intensity_trend,
+            "valence_trend": valence_trend,
+            "total_entries": len(emotional_states),
+            "dominant_emotions": sorted(emotion_frequencies.items(), key=lambda x: x[1], reverse=True)[:5]
+        }
+
+    def detect_emotional_patterns(self, user_id: int, db: Session) -> List[Dict]:
+        """Detect concerning emotional patterns"""
+        from database import EmotionalState, EmotionalPattern
+        
+        detected_patterns = []
+        
+        # Get recent emotional states (last 30 days)
+        since_date = datetime.now(timezone.utc) - timedelta(days=30)
+        emotional_states = db.query(EmotionalState).filter(
+            EmotionalState.user_id == user_id,
+            EmotionalState.detected_at >= since_date
+        ).order_by(EmotionalState.detected_at.desc()).all()
+        
+        if len(emotional_states) < 5:
+            return detected_patterns
+        
+        # Check for each warning pattern
+        for pattern_name, pattern_config in self.warning_patterns.items():
+            if pattern_name == "self_harm_ideation":
+                # Special handling for self-harm indicators
+                pattern_count = 0
+                for state in emotional_states:
+                    if state.emotional_context:
+                        for keyword in pattern_config["keywords"]:
+                            if keyword.lower() in state.emotional_context.lower():
+                                pattern_count += 1
+                                break
+                
+                if pattern_count >= pattern_config["frequency_threshold"]:
+                    detected_patterns.append({
+                        "pattern_type": "critical",
+                        "pattern_name": pattern_name,
+                        "severity": 1.0,  # Maximum severity
+                        "frequency": pattern_count,
+                        "description": "Critical: Self-harm ideation detected",
+                        "requires_immediate_attention": True,
+                        "recommended_actions": ["Encourage professional help", "Provide crisis resources", "Monitor closely"]
+                    })
+            else:
+                # Check for emotional pattern frequencies
+                pattern_emotions = pattern_config["emotions"]
+                pattern_count = 0
+                high_intensity_count = 0
+                
+                for state in emotional_states:
+                    if state.primary_emotion in pattern_emotions:
+                        pattern_count += 1
+                        if state.emotional_intensity >= pattern_config["severity_threshold"]:
+                            high_intensity_count += 1
+                
+                if pattern_count >= pattern_config["frequency_threshold"]:
+                    severity = min(1.0, (pattern_count / pattern_config["frequency_threshold"]) * 0.5 + 
+                                 (high_intensity_count / max(1, pattern_count)) * 0.5)
+                    
+                    detected_patterns.append({
+                        "pattern_type": "warning",
+                        "pattern_name": pattern_name,
+                        "severity": severity,
+                        "frequency": pattern_count,
+                        "high_intensity_frequency": high_intensity_count,
+                        "description": self._get_pattern_description(pattern_name, pattern_count),
+                        "requires_immediate_attention": severity >= 0.8,
+                        "recommended_actions": self._get_recommended_actions(pattern_name)
+                    })
+        
+        # Sort by severity
+        detected_patterns.sort(key=lambda x: x["severity"], reverse=True)
+        return detected_patterns
+
+    def _get_pattern_description(self, pattern_name: str, frequency: int) -> str:
+        """Generate human-readable pattern descriptions"""
+        descriptions = {
+            "escalating_distress": f"Increasing anxiety and stress levels detected ({frequency} mentions recently)",
+            "persistent_sadness": f"Ongoing signs of depression or persistent sadness ({frequency} mentions recently)",
+            "isolation_indicators": f"Patterns of social isolation and loneliness ({frequency} mentions recently)",
+            "anger_escalation": f"Escalating anger and frustration levels ({frequency} mentions recently)"
+        }
+        return descriptions.get(pattern_name, f"Concerning pattern detected: {pattern_name}")
+
+    def _get_recommended_actions(self, pattern_name: str) -> List[str]:
+        """Get recommended actions for each pattern type"""
+        actions = {
+            "escalating_distress": [
+                "Explore stress management techniques",
+                "Discuss what's causing the increased anxiety",
+                "Consider grounding exercises or mindfulness",
+                "Evaluate if professional support might be helpful"
+            ],
+            "persistent_sadness": [
+                "Gently explore the source of sadness",
+                "Encourage self-care activities",
+                "Discuss social support systems",
+                "Consider suggesting professional mental health support"
+            ],
+            "isolation_indicators": [
+                "Encourage social connection",
+                "Explore barriers to social interaction",
+                "Suggest small steps to reconnect",
+                "Discuss community or support group options"
+            ],
+            "anger_escalation": [
+                "Explore healthy ways to express anger",
+                "Discuss stress reduction techniques",
+                "Help identify triggers",
+                "Consider anger management strategies"
+            ]
+        }
+        return actions.get(pattern_name, ["Monitor closely", "Provide supportive responses"])
+
+    def create_emotional_state_entry(self, user_id: int, message: str, conversation_id: int, 
+                                   message_id: int, db: Session) -> Optional[int]:
+        """Create an emotional state entry from a message"""
+        from database import EmotionalState
+        
+        # Analyze the emotional content
+        emotional_analysis = self._analyze_message_emotions(message)
+        
+        if not emotional_analysis["emotions_detected"]:
+            return None  # No significant emotions detected
+        
+        # Create emotional state entry
+        emotional_state = EmotionalState(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            message_id=message_id,
+            primary_emotion=emotional_analysis["primary_emotion"],
+            emotional_intensity=emotional_analysis["intensity"],
+            valence=emotional_analysis["valence"],
+            arousal=emotional_analysis["arousal"],
+            detected_emotions=emotional_analysis["all_emotions"],
+            emotional_context=emotional_analysis["context"]
+        )
+        
+        db.add(emotional_state)
+        db.commit()
+        db.refresh(emotional_state)
+        
+        return emotional_state.id
+
+    def _analyze_message_emotions(self, message: str) -> Dict:
+        """Analyze emotions in a message"""
+        message_lower = message.lower()
+        detected_emotions = []
+        emotion_scores = {}
+        
+        # Check for emotions in each category
+        for category, emotions in self.emotion_categories.items():
+            category_score = 0
+            found_emotions = []
+            
+            for emotion in emotions:
+                if emotion in message_lower:
+                    found_emotions.append(emotion)
+                    category_score += 1
+            
+            if found_emotions:
+                detected_emotions.extend(found_emotions)
+                emotion_scores[category] = category_score / len(emotions)
+        
+        if not detected_emotions:
+            return {"emotions_detected": False}
+        
+        # Determine primary emotion (highest scoring category)
+        primary_category = max(emotion_scores.keys(), key=lambda k: emotion_scores[k])
+        primary_emotion = primary_category
+        
+        # Calculate metrics
+        intensity = min(1.0, len(detected_emotions) * 0.3)  # Intensity based on number of emotions
+        
+        # Calculate valence (positive/negative)
+        positive_categories = ["joy", "love", "hope", "calm"]
+        negative_categories = ["anxiety", "depression", "anger", "fear", "disgust", "shame"]
+        
+        positive_score = sum(emotion_scores.get(cat, 0) for cat in positive_categories)
+        negative_score = sum(emotion_scores.get(cat, 0) for cat in negative_categories)
+        
+        if positive_score + negative_score > 0:
+            valence = (positive_score - negative_score) / (positive_score + negative_score)
+        else:
+            valence = 0.0
+        
+        # Calculate arousal (excited/calm)
+        high_arousal_categories = ["anger", "fear", "joy", "surprise"]
+        low_arousal_categories = ["depression", "calm", "shame"]
+        
+        high_arousal_score = sum(emotion_scores.get(cat, 0) for cat in high_arousal_categories)
+        low_arousal_score = sum(emotion_scores.get(cat, 0) for cat in low_arousal_categories)
+        
+        if high_arousal_score + low_arousal_score > 0:
+            arousal = high_arousal_score / (high_arousal_score + low_arousal_score)
+        else:
+            arousal = 0.5
+        
+        return {
+            "emotions_detected": True,
+            "primary_emotion": primary_emotion,
+            "all_emotions": detected_emotions,
+            "intensity": intensity,
+            "valence": valence,
+            "arousal": arousal,
+            "context": message[:200],  # First 200 chars for context
+            "emotion_scores": emotion_scores
+        }
+
+    def get_helpful_topics(self, user_id: int, db: Session) -> List[str]:
+        """Get topics that tend to help this specific user"""
+        from database import EmotionalState, Message
+        
+        # Find conversations where user's emotional state improved
+        helpful_topics = []
+        
+        # Get emotional states that improved (went from negative to positive valence)
+        emotional_states = db.query(EmotionalState).filter(
+            EmotionalState.user_id == user_id
+        ).order_by(EmotionalState.detected_at.desc()).limit(100).all()
+        
+        for i in range(1, len(emotional_states)):
+            current_state = emotional_states[i-1]  # More recent
+            previous_state = emotional_states[i]   # Earlier
+            
+            # Check if there was improvement
+            if (current_state.valence > previous_state.valence + 0.2 or 
+                current_state.emotional_intensity < previous_state.emotional_intensity - 0.2):
+                
+                # Find the conversation topics around this improvement
+                if current_state.conversation_id:
+                    messages = db.query(Message).filter(
+                        Message.conversation_id == current_state.conversation_id,
+                        Message.role == "assistant",
+                        Message.timestamp <= current_state.detected_at
+                    ).order_by(Message.timestamp.desc()).limit(3).all()
+                    
+                    for message in messages:
+                        # Extract key topics from helpful assistant messages
+                        content_lower = message.content.lower()
+                        for category, topics in self.helpful_interventions.items():
+                            for topic in topics:
+                                if topic in content_lower and topic not in helpful_topics:
+                                    helpful_topics.append(topic)
+        
+        return helpful_topics[:10]  # Return top 10 helpful topics
+
+    def get_topics_to_avoid(self, current_emotional_state: str) -> List[str]:
+        """Get topics to avoid based on current emotional state"""
+        topics_to_avoid = []
+        
+        if current_emotional_state in ["sad", "depressed", "hopeless"]:
+            topics_to_avoid.extend(self.sensitive_topics["avoid_when_depressed"])
+        
+        if current_emotional_state in ["anxious", "worried", "stressed"]:
+            topics_to_avoid.extend(self.sensitive_topics["avoid_when_anxious"])
+        
+        topics_to_avoid.extend(self.sensitive_topics["handle_carefully"])
+        
+        return list(set(topics_to_avoid))  # Remove duplicates
+
 class CognitiveProcessor:
     """Advanced cognitive processing for the AI agent"""
 
@@ -948,8 +1334,9 @@ class CognitiveProcessor:
 
         return base_prompt
 
-# Global cognitive processor
+# Global cognitive processor and emotional tracker
 cognitive_processor = CognitiveProcessor()
+emotional_tracker = EmotionalTrajectoryTracker()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -1662,6 +2049,173 @@ async def get_follow_up_suggestions(
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+# Mental Health Tracking Endpoints
+@app.get("/api/mental-health/trajectory")
+@cache_response(ttl=300)  # Cache for 5 minutes
+async def get_emotional_trajectory(
+    days_back: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's emotional trajectory over time"""
+    trajectory = emotional_tracker.analyze_emotional_trajectory(current_user.id, db, days_back)
+    return {
+        "trajectory": trajectory,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/mental-health/patterns")
+@cache_response(ttl=60)  # Cache for 1 minute
+async def get_emotional_patterns(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get detected emotional patterns"""
+    patterns = emotional_tracker.detect_emotional_patterns(current_user.id, db)
+    return {
+        "patterns": patterns,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/mental-health/insights")
+@cache_response(ttl=300)  # Cache for 5 minutes
+async def get_mental_health_insights(
+    unacknowledged_only: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get mental health insights and recommendations"""
+    from database import MentalHealthInsight
+    
+    query = db.query(MentalHealthInsight).filter(
+        MentalHealthInsight.user_id == current_user.id
+    )
+    
+    if unacknowledged_only:
+        query = query.filter(MentalHealthInsight.is_acknowledged == False)
+    
+    insights = query.order_by(MentalHealthInsight.created_at.desc()).limit(20).all()
+    
+    result = []
+    for insight in insights:
+        result.append({
+            "id": insight.id,
+            "insight_type": insight.insight_type,
+            "title": insight.title,
+            "description": insight.description,
+            "severity_level": insight.severity_level,
+            "suggested_actions": insight.suggested_actions,
+            "helpful_topics": insight.helpful_topics,
+            "avoid_topics": insight.avoid_topics,
+            "is_acknowledged": insight.is_acknowledged,
+            "created_at": insight.created_at,
+            "requires_attention": insight.severity_level in ["high", "critical"]
+        })
+    
+    return {
+        "insights": result,
+        "unacknowledged_count": len([i for i in result if not i["is_acknowledged"]]),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/mental-health/insights/{insight_id}/acknowledge")
+async def acknowledge_insight(
+    insight_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Acknowledge a mental health insight"""
+    from database import MentalHealthInsight
+    
+    insight = db.query(MentalHealthInsight).filter(
+        MentalHealthInsight.id == insight_id,
+        MentalHealthInsight.user_id == current_user.id
+    ).first()
+    
+    if not insight:
+        raise HTTPException(status_code=404, detail="Insight not found")
+    
+    insight.is_acknowledged = True
+    insight.acknowledged_at = datetime.now(timezone.utc)
+    db.commit()
+    
+    return {"message": "Insight acknowledged successfully"}
+
+@app.get("/api/mental-health/helpful-topics")
+@cache_response(ttl=600)  # Cache for 10 minutes
+async def get_helpful_topics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get topics that tend to help this user"""
+    helpful_topics = emotional_tracker.get_helpful_topics(current_user.id, db)
+    
+    # Also get current emotional state to provide context-specific recommendations
+    from database import EmotionalState
+    latest_state = db.query(EmotionalState).filter(
+        EmotionalState.user_id == current_user.id
+    ).order_by(EmotionalState.detected_at.desc()).first()
+    
+    topics_to_avoid = []
+    if latest_state:
+        topics_to_avoid = emotional_tracker.get_topics_to_avoid(latest_state.primary_emotion)
+    
+    return {
+        "helpful_topics": helpful_topics,
+        "topics_to_avoid": topics_to_avoid,
+        "current_emotional_state": latest_state.primary_emotion if latest_state else "neutral",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/mental-health/dashboard")
+@cache_response(ttl=300)  # Cache for 5 minutes
+async def get_mental_health_dashboard(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive mental health dashboard data"""
+    # Get trajectory for last 14 days
+    trajectory = emotional_tracker.analyze_emotional_trajectory(current_user.id, db, 14)
+    
+    # Get current patterns
+    patterns = emotional_tracker.detect_emotional_patterns(current_user.id, db)
+    concerning_patterns = [p for p in patterns if p["severity"] >= 0.6]
+    
+    # Get unacknowledged insights
+    from database import MentalHealthInsight
+    unack_insights = db.query(MentalHealthInsight).filter(
+        MentalHealthInsight.user_id == current_user.id,
+        MentalHealthInsight.is_acknowledged == False
+    ).count()
+    
+    # Get helpful topics
+    helpful_topics = emotional_tracker.get_helpful_topics(current_user.id, db)
+    
+    # Calculate overall wellbeing score
+    wellbeing_score = 0.5  # Default neutral
+    if trajectory.get("avg_valence") is not None:
+        # Convert valence (-1 to 1) to wellbeing score (0 to 1)
+        wellbeing_score = (trajectory["avg_valence"] + 1) / 2
+        
+        # Adjust based on concerning patterns
+        if concerning_patterns:
+            max_severity = max(p["severity"] for p in concerning_patterns)
+            wellbeing_score = wellbeing_score * (1 - max_severity * 0.5)
+    
+    return {
+        "wellbeing_score": round(wellbeing_score, 2),
+        "trajectory_summary": {
+            "trend": trajectory.get("valence_trend", "stable"),
+            "avg_valence": trajectory.get("avg_valence", 0),
+            "dominant_emotions": trajectory.get("dominant_emotions", [])[:3]
+        },
+        "concerning_patterns_count": len(concerning_patterns),
+        "unacknowledged_insights_count": unack_insights,
+        "helpful_topics_count": len(helpful_topics),
+        "status": "needs_attention" if concerning_patterns or unack_insights > 0 else "stable",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.post("/api/chat/stream")
 async def stream_chat(
     request: StreamChatRequest,
@@ -1756,6 +2310,12 @@ async def stream_chat(
             )
             db.add(user_message)
             db.commit()
+            db.refresh(user_message)
+
+            # Track emotional state
+            emotional_state_id = emotional_tracker.create_emotional_state_entry(
+                current_user.id, request.message, conversation.id, user_message.id, db
+            )
 
             # Get streaming response from OpenAI with optimizations
             # the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -1858,12 +2418,66 @@ async def stream_chat(
                 )
                 db.add(memory)
 
+            # Check for concerning emotional patterns
+            emotional_patterns = emotional_tracker.detect_emotional_patterns(current_user.id, db)
+            if emotional_patterns:
+                # Store patterns that require attention
+                from database import EmotionalPattern, MentalHealthInsight
+                
+                for pattern in emotional_patterns:
+                    if pattern["severity"] >= 0.6:  # Only store significant patterns
+                        # Check if this pattern already exists
+                        existing_pattern = db.query(EmotionalPattern).filter(
+                            EmotionalPattern.user_id == current_user.id,
+                            EmotionalPattern.pattern_name == pattern["pattern_name"],
+                            EmotionalPattern.is_active == True
+                        ).first()
+                        
+                        if not existing_pattern:
+                            # Create new pattern
+                            new_pattern = EmotionalPattern(
+                                user_id=current_user.id,
+                                pattern_type=pattern["pattern_type"],
+                                pattern_name=pattern["pattern_name"],
+                                description=pattern["description"],
+                                frequency=pattern["frequency"],
+                                severity=pattern["severity"],
+                                confidence=0.8,
+                                emotions_involved=pattern.get("emotions", []),
+                                requires_attention=pattern.get("requires_immediate_attention", False)
+                            )
+                            db.add(new_pattern)
+                            db.commit()
+                            db.refresh(new_pattern)
+                            
+                            # Create insight if pattern is concerning
+                            if pattern["severity"] >= 0.7:
+                                insight = MentalHealthInsight(
+                                    user_id=current_user.id,
+                                    pattern_id=new_pattern.id,
+                                    insight_type="warning",
+                                    title=f"Concerning Pattern Detected: {pattern['pattern_name'].replace('_', ' ').title()}",
+                                    description=pattern["description"],
+                                    severity_level="high" if pattern["severity"] >= 0.8 else "medium",
+                                    suggested_actions=pattern.get("recommended_actions", [])
+                                )
+                                db.add(insight)
+                        else:
+                            # Update existing pattern
+                            existing_pattern.severity = max(existing_pattern.severity, pattern["severity"])
+                            existing_pattern.last_occurrence = datetime.now(timezone.utc)
+                            existing_pattern.frequency = pattern["frequency"]
+
             # Update conversation timestamp
             conversation.updated_at = datetime.now(timezone.utc)
             db.commit()
 
-            # Send cognitive update
-            yield f"data: {json.dumps({'type': 'cognitive_update', 'state': updated_state.model_dump()})}\n\n"
+            # Send cognitive update with emotional insights
+            cognitive_update = updated_state.model_dump()
+            if emotional_patterns:
+                cognitive_update["emotional_patterns"] = [p for p in emotional_patterns if p["severity"] >= 0.5]
+            
+            yield f"data: {json.dumps({'type': 'cognitive_update', 'state': cognitive_update})}\n\n"
 
             # Send completion signal
             yield f"data: {json.dumps({'type': 'complete', 'message': 'Response completed'})}\n\n"

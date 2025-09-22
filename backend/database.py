@@ -42,6 +42,9 @@ class User(Base):
     owned_shared_conversations = relationship("SharedConversation", back_populates="owner")
     shared_conversation_participations = relationship("SharedConversationParticipant", back_populates="user")
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
+    emotional_states = relationship("EmotionalState", back_populates="user", cascade="all, delete-orphan")
+    emotional_patterns = relationship("EmotionalPattern", back_populates="user", cascade="all, delete-orphan")
+    mental_health_insights = relationship("MentalHealthInsight", back_populates="user", cascade="all, delete-orphan")
 
 
 class Conversation(Base):
@@ -274,11 +277,119 @@ class ConversationTopic(Base):
         Index('idx_conv_topic_topic_score', 'topic_name', 'relevance_score'),
     )
 
+class EmotionalState(Base):
+    __tablename__ = "emotional_states"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True, index=True)
+    
+    # Emotional metrics
+    primary_emotion = Column(String(50), nullable=False, index=True)
+    emotional_intensity = Column(Float, default=0.0)  # 0.0 to 1.0
+    valence = Column(Float, default=0.0)  # -1.0 (negative) to 1.0 (positive)
+    arousal = Column(Float, default=0.0)  # 0.0 (calm) to 1.0 (excited)
+    
+    # Detected emotional keywords
+    detected_emotions = Column(JSON, nullable=True)  # List of all emotions detected
+    emotional_context = Column(Text, nullable=True)  # Context that triggered the emotion
+    
+    # Timestamps
+    detected_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    
+    # Relationships
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    message = relationship("Message")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_emotion_user_date', 'user_id', 'detected_at'),
+        Index('idx_emotion_user_primary', 'user_id', 'primary_emotion'),
+        Index('idx_emotion_intensity', 'user_id', 'emotional_intensity'),
+    )
+
+class EmotionalPattern(Base):
+    __tablename__ = "emotional_patterns"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Pattern identification
+    pattern_type = Column(String(50), nullable=False, index=True)  # "recurring", "escalating", "declining", "cyclical"
+    pattern_name = Column(String(100), nullable=False)  # Human-readable pattern name
+    description = Column(Text, nullable=True)
+    
+    # Pattern metrics
+    frequency = Column(Float, default=0.0)  # How often this pattern occurs
+    severity = Column(Float, default=0.0)  # 0.0 to 1.0, how concerning this pattern is
+    confidence = Column(Float, default=0.0)  # 0.0 to 1.0, confidence in pattern detection
+    
+    # Time-based information
+    first_detected = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_occurrence = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    pattern_duration_days = Column(Integer, default=0)
+    
+    # Pattern data
+    emotions_involved = Column(JSON, nullable=True)  # List of emotions in this pattern
+    triggers = Column(JSON, nullable=True)  # Common triggers for this pattern
+    interventions_tried = Column(JSON, nullable=True)  # What has been tried to address this
+    
+    # Status
+    is_active = Column(Boolean, default=True, index=True)
+    requires_attention = Column(Boolean, default=False, index=True)
+    
+    # Relationships
+    user = relationship("User")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_pattern_user_active', 'user_id', 'is_active'),
+        Index('idx_pattern_user_severity', 'user_id', 'severity'),
+        Index('idx_pattern_attention', 'user_id', 'requires_attention'),
+    )
+
+class MentalHealthInsight(Base):
+    __tablename__ = "mental_health_insights"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    pattern_id = Column(Integer, ForeignKey("emotional_patterns.id"), nullable=True, index=True)
+    
+    # Insight information
+    insight_type = Column(String(50), nullable=False, index=True)  # "warning", "improvement", "recommendation", "milestone"
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    severity_level = Column(String(20), default="low", index=True)  # "low", "medium", "high", "critical"
+    
+    # Recommendations
+    suggested_actions = Column(JSON, nullable=True)  # List of suggested actions
+    helpful_topics = Column(JSON, nullable=True)  # Topics that tend to help this user
+    avoid_topics = Column(JSON, nullable=True)  # Topics that tend to be harmful
+    
+    # Status
+    is_acknowledged = Column(Boolean, default=False)
+    is_resolved = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    user = relationship("User")
+    pattern = relationship("EmotionalPattern")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_insight_user_severity', 'user_id', 'severity_level'),
+        Index('idx_insight_user_unack', 'user_id', 'is_acknowledged'),
+        Index('idx_insight_created', 'created_at'),
+    )
+
 # Create tables
 def create_tables():
     """Create database tables"""
     Base.metadata.create_all(bind=engine)
-    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile, Goal, GoalUpdate, ConversationTopic")
+    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile, Goal, GoalUpdate, ConversationTopic, EmotionalState, EmotionalPattern, MentalHealthInsight")
 
 # Database dependency
 def get_db():

@@ -74,6 +74,8 @@ const AppContent: React.FC = () => {
   const [showCollaborations, setShowCollaborations] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<string, number>>>({});
+  const [mentalHealthData, setMentalHealthData] = useState<any>(null);
+  const [showMentalHealthPanel, setShowMentalHealthPanel] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -306,6 +308,40 @@ const AppContent: React.FC = () => {
     }));
   };
 
+  // Fetch mental health dashboard data
+  const fetchMentalHealthData = async () => {
+    try {
+      const isLocal = window.location.hostname === 'localhost';
+      const host = window.location.host;
+      const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
+      const protocol = isLocal ? 'http' : 'https';
+      
+      const response = await fetch(`${protocol}://${backendHost}/api/mental-health/dashboard`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMentalHealthData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching mental health data:', error);
+    }
+  };
+
+  // Fetch mental health data on auth
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMentalHealthData();
+      // Refresh every 5 minutes
+      const interval = setInterval(fetchMentalHealthData, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
+
   // Test associative recall
   const testAssociativeRecall = async (testMessage: string) => {
     try {
@@ -452,6 +488,30 @@ const AppContent: React.FC = () => {
 
             {/* Theme Toggle */}
             <ThemeToggle />
+
+            {/* Mental Health Status */}
+            {mentalHealthData && (
+              <motion.button
+                className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  mentalHealthData.status === 'needs_attention'
+                    ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                    : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                }`}
+                onClick={() => setShowMentalHealthPanel(!showMentalHealthPanel)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Heart className={`w-3 h-3 ${
+                  mentalHealthData.status === 'needs_attention' ? 'text-yellow-400' : 'text-green-400'
+                }`} />
+                <span>{Math.round(mentalHealthData.wellbeing_score * 100)}%</span>
+                {mentalHealthData.unacknowledged_insights_count > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {mentalHealthData.unacknowledged_insights_count}
+                  </span>
+                )}
+              </motion.button>
+            )}
 
             {/* Connection Status */}
             <motion.div
@@ -763,6 +823,104 @@ const AppContent: React.FC = () => {
               <div className="text-sm text-gray-400">Stored interactions</div>
             </div>
           </motion.div>
+
+          {/* Mental Health Panel */}
+          {showMentalHealthPanel && mentalHealthData && (
+            <motion.div
+              className="bg-white/10 rounded-xl p-4 mb-6"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <h3 className="font-semibold mb-3 flex items-center space-x-2">
+                <Heart className="w-4 h-4 text-pink-400" />
+                <span>Mental Health Insights</span>
+              </h3>
+              
+              {/* Wellbeing Score */}
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Wellbeing Score</span>
+                  <span className={`font-bold ${
+                    mentalHealthData.wellbeing_score >= 0.7 ? 'text-green-400' :
+                    mentalHealthData.wellbeing_score >= 0.4 ? 'text-yellow-400' : 'text-red-400'
+                  }`}>
+                    {Math.round(mentalHealthData.wellbeing_score * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-white/20 rounded-full h-2">
+                  <motion.div
+                    className={`h-2 rounded-full ${
+                      mentalHealthData.wellbeing_score >= 0.7 ? 'bg-green-400' :
+                      mentalHealthData.wellbeing_score >= 0.4 ? 'bg-yellow-400' : 'bg-red-400'
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${mentalHealthData.wellbeing_score * 100}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                </div>
+              </div>
+
+              {/* Emotional Trend */}
+              <div className="mb-4">
+                <div className="text-sm text-gray-400 mb-1">Emotional Trend (14 days)</div>
+                <div className={`text-sm font-medium ${
+                  mentalHealthData.trajectory_summary.trend === 'improving' ? 'text-green-400' :
+                  mentalHealthData.trajectory_summary.trend === 'declining' ? 'text-red-400' : 'text-gray-400'
+                }`}>
+                  {mentalHealthData.trajectory_summary.trend === 'improving' ? '📈 Improving' :
+                   mentalHealthData.trajectory_summary.trend === 'declining' ? '📉 Declining' : '➡️ Stable'}
+                </div>
+              </div>
+
+              {/* Dominant Emotions */}
+              {mentalHealthData.trajectory_summary.dominant_emotions.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-sm text-gray-400 mb-2">Recent Emotions</div>
+                  <div className="flex flex-wrap gap-2">
+                    {mentalHealthData.trajectory_summary.dominant_emotions.map(([emotion, count], index) => (
+                      <span
+                        key={emotion}
+                        className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs"
+                      >
+                        {emotion} ({count})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Alerts */}
+              {mentalHealthData.concerning_patterns_count > 0 && (
+                <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3 mb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-yellow-400">⚠️</span>
+                    <span className="text-sm font-medium text-yellow-400">
+                      {mentalHealthData.concerning_patterns_count} pattern(s) detected
+                    </span>
+                  </div>
+                  <div className="text-xs text-yellow-300 mt-1">
+                    I'm monitoring some emotional patterns that might need attention
+                  </div>
+                </div>
+              )}
+
+              {mentalHealthData.unacknowledged_insights_count > 0 && (
+                <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-blue-400">💡</span>
+                    <span className="text-sm font-medium text-blue-400">
+                      {mentalHealthData.unacknowledged_insights_count} new insight(s)
+                    </span>
+                  </div>
+                  <div className="text-xs text-blue-300 mt-1">
+                    I have some observations about your wellbeing to share
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* Beliefs */}
           <motion.div
