@@ -33,7 +33,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+args = "cd backend && uvicorn main:app --host localhost --port 8000 --reload"
 waitForPort = 8000
 
 [[workflows.workflow]]
@@ -41,13 +41,13 @@ name = "Frontend"
 author = "agent"
 mode = "sequential"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd frontend && npm run dev"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow]]
 name = "Full Stack"
@@ -67,8 +67,8 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8000
-externalPort = 8000
+localPort = 32811
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "vm"
