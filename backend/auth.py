@@ -64,14 +64,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
+    # Ensure 'sub' is present for authentication
+    if "sub" not in to_encode and "username" in to_encode:
+        to_encode["sub"] = to_encode["username"]
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 def verify_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        username = payload.get("sub")
+        if not username:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials"
@@ -134,16 +137,17 @@ def authenticate_user(db: Session, username: str, password: str):
 
 def user_to_response(user: User) -> UserResponse:
     try:
-        ai_personality = json.loads(user.ai_personality) if user.ai_personality else {}
-    except json.JSONDecodeError:
+        ai_personality_val = getattr(user, "ai_personality", None)
+        ai_personality = json.loads(ai_personality_val) if ai_personality_val else {}
+    except Exception:
         ai_personality = {}
-    
+
     return UserResponse(
-        id=user.id,
-        username=user.username,
-        email=user.email,
-        created_at=user.created_at,
+        id=int(getattr(user, "id", 0)),
+        username=str(getattr(user, "username", "")),
+        email=str(getattr(user, "email", "")),
+        created_at=getattr(user, "created_at", datetime.now()),
         ai_personality=ai_personality,
-        preferred_mood=user.preferred_mood,
-        energy_preference=user.energy_preference
+        preferred_mood=str(getattr(user, "preferred_mood", "")),
+        energy_preference=float(getattr(user, "energy_preference", 0.5))
     )

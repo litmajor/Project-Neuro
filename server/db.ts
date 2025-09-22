@@ -1,7 +1,8 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
-import * as schema from "@shared/schema";
+// Update the path below to the correct relative location of your schema file, e.g.:
+import * as schema from "../shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 

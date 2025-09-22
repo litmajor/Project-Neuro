@@ -8,7 +8,7 @@ import logging
 import shutil
 import uuid
 import time
-from typing import Dict, List, Optional, AsyncGenerator
+from typing import Dict, List, Optional, AsyncGenerator, Any
 from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -31,7 +31,7 @@ from auth import (
     create_user, authenticate_user, create_access_token, get_current_user, user_to_response
 )
 
-# the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -141,7 +141,7 @@ class ResponseCache:
         self._cleanup()
         if len(self.cache) >= self.max_size:
             # Remove oldest entry
-            oldest_key = min(self.access_times.keys(), key=self.access_times.get)
+            oldest_key = min(self.access_times.keys(), key=lambda k: self.access_times[k])
             self.cache.pop(oldest_key, None)
             self.access_times.pop(oldest_key, None)
 
@@ -288,7 +288,7 @@ class CognitiveProcessor:
             }
         }
 
-    def analyze_emotional_content(self, text: str) -> Dict[str, any]:
+    def analyze_emotional_content(self, text: str) -> Dict[str, Any]:
         """Advanced emotional content analysis"""
         text_lower = text.lower()
         emotions_found = []
@@ -312,7 +312,7 @@ class CognitiveProcessor:
         for emotion_data in emotions_found:
             category_scores[emotion_data["category"]] += abs(emotion_data["weight"])
 
-        dominant_category = max(category_scores, key=category_scores.get) if any(category_scores.values()) else "neutral"
+        dominant_category = max(category_scores, key=lambda k: category_scores[k]) if any(category_scores.values()) else "neutral"
 
         # Normalize overall score
         normalized_score = max(-2.0, min(2.0, total_score / max(1, len(emotions_found))))
@@ -332,7 +332,7 @@ class CognitiveProcessor:
                 return category
         return "neutral"
 
-    def update_cognitive_state(self, current_state: CognitiveState, message: str, ai_response: str, user_id: int = None, db: Session = None) -> CognitiveState:
+    def update_cognitive_state(self, current_state: CognitiveState, message: str, ai_response: str, user_id: Optional[int] = None, db: Optional[Session] = None) -> CognitiveState:
         """Update cognitive state with advanced emotion analysis and preference learning"""
         # Advanced emotional analysis
         emotion_analysis = self.analyze_emotional_content(message + " " + ai_response)
@@ -433,8 +433,8 @@ class CognitiveProcessor:
         ).first()
 
         if preference:
-            preference.confidence_score = min(1.0, preference.confidence_score + confidence_increment)
-            preference.updated_at = datetime.now(timezone.utc)
+            setattr(preference, "confidence_score", min(1.0, float(getattr(preference, "confidence_score", 0)) + confidence_increment))
+            setattr(preference, "updated_at", datetime.now(timezone.utc))
         else:
             preference = UserPreference(
                 user_id=user_id,
@@ -459,19 +459,21 @@ class CognitiveProcessor:
         adaptations = []
 
         for pref in preferences:
-            if pref.preference_type == "response_length":
-                if pref.preference_value == "detailed":
+            pref_type = getattr(pref, "preference_type", None)
+            pref_value = getattr(pref, "preference_value", None)
+            if pref_type == "response_length":
+                if pref_value == "detailed":
                     adaptations.append("Provide comprehensive, detailed responses with examples.")
-                elif pref.preference_value == "concise":
+                elif pref_value == "concise":
                     adaptations.append("Keep responses brief and to the point.")
 
-            elif pref.preference_type == "topic_interest":
-                adaptations.append(f"User shows interest in {pref.preference_value}. Reference this when relevant.")
+            elif pref_type == "topic_interest":
+                adaptations.append(f"User shows interest in {pref_value}. Reference this when relevant.")
 
-            elif pref.preference_type == "emotional_tone":
-                if pref.preference_value == "positive":
+            elif pref_type == "emotional_tone":
+                if pref_value == "positive":
                     adaptations.append("User responds well to upbeat, optimistic language.")
-                elif pref.preference_value == "negative":
+                elif pref_value == "negative":
                     adaptations.append("User may be going through difficulties. Be extra empathetic and supportive.")
 
         if adaptations:
@@ -584,17 +586,17 @@ async def performance_metrics(
             (SELECT COUNT(*) FROM memories WHERE user_id = :user_id) as total_memories,
             (SELECT COUNT(*) FROM user_preferences WHERE user_id = :user_id) as total_preferences
         """),
-        {"user_id": current_user.id}
+        {"user_id": int(getattr(current_user, "id", 0))}
     ).fetchone()
 
     return {
         "cache": cache_stats,
         "database": db_stats,
         "user_data": {
-            "conversations": user_stats.total_conversations,
-            "messages": user_stats.total_messages,
-            "memories": user_stats.total_memories,
-            "preferences": user_stats.total_preferences
+            "conversations": user_stats[0] if user_stats else 0,
+            "messages": user_stats[1] if user_stats else 0,
+            "memories": user_stats[2] if user_stats else 0,
+            "preferences": user_stats[3] if user_stats else 0
         },
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
@@ -656,9 +658,9 @@ async def update_personality(
     db: Session = Depends(get_db)
 ):
     """Update user's AI personality settings"""
-    current_user.ai_personality = json.dumps(settings.ai_personality)
-    current_user.preferred_mood = settings.preferred_mood
-    current_user.energy_preference = settings.energy_preference
+    setattr(current_user, "ai_personality", json.dumps(settings.ai_personality))
+    setattr(current_user, "preferred_mood", settings.preferred_mood)
+    setattr(current_user, "energy_preference", settings.energy_preference)
     db.commit()
     db.refresh(current_user)
     return user_to_response(current_user)
@@ -683,7 +685,7 @@ async def get_conversations(
         ORDER BY c.updated_at DESC
         LIMIT 20
         """),
-        {"user_id": current_user.id}
+        {"user_id": int(getattr(current_user, "id", 0))}
     ).fetchall()
 
     return [
@@ -707,7 +709,7 @@ async def get_conversation(
     """Get specific conversation with messages using optimized query"""
     # Use optimized single query
     results = db_optimizer.get_conversation_with_messages_optimized(
-        db, conversation_id, current_user.id, limit=100
+        db, conversation_id, int(getattr(current_user, "id", 0)), limit=100
     )
 
     if not results:
@@ -743,7 +745,7 @@ async def get_memories(
     db: Session = Depends(get_db)
 ):
     """Get user's memories with optimized query"""
-    memories = db_optimizer.get_user_memories_optimized(db, current_user.id, limit=50)
+    memories = db_optimizer.get_user_memories_optimized(db, int(getattr(current_user, "id", 0)), limit=50)
 
     return [
         {
@@ -766,32 +768,28 @@ async def get_user_preferences(
     """Get user's learned preferences with optimized grouping"""
     try:
         # Use optimized grouped query
-        results = db_optimizer.get_user_preferences_grouped(db, current_user.id)
-
+        results = db_optimizer.get_user_preferences_grouped(db, int(getattr(current_user, "id", 0)))
         grouped_prefs = {}
         for row in results:
             grouped_prefs[row.preference_type] = json.loads(row.preferences)
-
         return grouped_prefs
     except Exception as e:
         # Fallback to original query for SQLite compatibility
         from database import UserPreference
-
         preferences = db.query(UserPreference).filter(
-            UserPreference.user_id == current_user.id
+            UserPreference.user_id == int(getattr(current_user, "id", 0))
         ).order_by(UserPreference.confidence_score.desc()).all()
-
         grouped_prefs = {}
         for pref in preferences:
-            if pref.preference_type not in grouped_prefs:
-                grouped_prefs[pref.preference_type] = []
-            grouped_prefs[pref.preference_type].append({
-                "value": pref.preference_value,
-                "confidence": pref.confidence_score,
-                "learned_from": pref.learned_from,
-                "updated_at": pref.updated_at
+            pref_type = getattr(pref, "preference_type", None)
+            if pref_type not in grouped_prefs:
+                grouped_prefs[pref_type] = []
+            grouped_prefs[pref_type].append({
+                "value": getattr(pref, "preference_value", None),
+                "confidence": getattr(pref, "confidence_score", None),
+                "learned_from": getattr(pref, "learned_from", None),
+                "updated_at": getattr(pref, "updated_at", None)
             })
-
         return grouped_prefs
 
 @app.get("/api/personality-insights")
@@ -804,13 +802,13 @@ async def get_personality_insights(
 
     # Get high-confidence preferences
     preferences = db.query(UserPreference).filter(
-        UserPreference.user_id == current_user.id,
+        UserPreference.user_id == int(getattr(current_user, "id", 0)),
         UserPreference.confidence_score > 0.5
     ).all()
 
     # Get recent conversation patterns
     recent_conversations = db.query(Conversation).filter(
-        Conversation.user_id == current_user.id
+        Conversation.user_id == int(getattr(current_user, "id", 0))
     ).order_by(Conversation.updated_at.desc()).limit(10).all()
 
     insights = {
@@ -826,12 +824,14 @@ async def get_personality_insights(
 
     # Analyze preferences
     for pref in preferences:
-        if pref.preference_type == "response_length":
-            insights["communication_style"].append(f"Prefers {pref.preference_value} responses")
-        elif pref.preference_type == "topic_interest":
-            insights["interests"].append(pref.preference_value)
-        elif pref.preference_type == "emotional_tone":
-            insights["emotional_patterns"].append(f"Tends toward {pref.preference_value} emotions")
+        pref_type = getattr(pref, "preference_type", None)
+        pref_value = getattr(pref, "preference_value", None)
+        if pref_type == "response_length":
+            insights["communication_style"].append(f"Prefers {pref_value} responses")
+        elif pref_type == "topic_interest":
+            insights["interests"].append(pref_value)
+        elif pref_type == "emotional_tone":
+            insights["emotional_patterns"].append(f"Tends toward {pref_value} emotions")
 
     return insights
 
@@ -883,8 +883,9 @@ async def stream_chat(
 
             # Get user's personality settings
             try:
-                user_personality = json.loads(current_user.ai_personality) if current_user.ai_personality else {}
-            except json.JSONDecodeError:
+                ai_personality_val = getattr(current_user, "ai_personality", None)
+                user_personality = json.loads(ai_personality_val) if ai_personality_val else {}
+            except Exception:
                 user_personality = {}
 
             # Get relevant memories for context
@@ -917,17 +918,22 @@ async def stream_chat(
             """
 
             system_prompt = cognitive_processor.get_personality_adapted_prompt(
-                current_user.id, base_system_prompt, db
+                int(getattr(current_user, "id", 0)), base_system_prompt, db
             )
 
-            messages: List[ChatCompletionMessageParam] = [{"role": "system", "content": system_prompt}]
+
+            from typing import cast
+            from openai.types.chat import ChatCompletionMessageParam
+            messages_param = [{"role": "system", "content": system_prompt}]
 
             # Add conversation history
             for msg in request.conversation_history[-10:]:  # Last 10 messages for context
-                messages.append({"role": msg.role, "content": msg.content})
+                messages_param.append({"role": msg.role, "content": msg.content})
 
             # Add current message
-            messages.append({"role": "user", "content": request.message})
+            messages_param.append({"role": "user", "content": request.message})
+
+            messages_param_casted = cast(List[ChatCompletionMessageParam], messages_param)
 
             # Save user message
             user_message = Message(
@@ -947,7 +953,7 @@ async def stream_chat(
 
             stream = client.chat.completions.create(
                 model="gpt-5",
-                messages=messages,
+                messages=messages_param_casted,
                 stream=True,
                 max_completion_tokens=500,
                 # Performance optimizations
@@ -986,7 +992,7 @@ async def stream_chat(
             # Update cognitive state with advanced learning
             current_state = request.cognitive_context or CognitiveState()
             updated_state = cognitive_processor.update_cognitive_state(
-                current_state, request.message, full_response, current_user.id, db
+                current_state, request.message, full_response, int(getattr(current_user, "id", 0)), db
             )
 
             # Create memory if conversation is meaningful
@@ -1004,7 +1010,7 @@ async def stream_chat(
                 db.add(memory)
 
             # Update conversation timestamp
-            conversation.updated_at = datetime.now(timezone.utc)
+            setattr(conversation, "updated_at", datetime.now(timezone.utc))
             db.commit()
 
             # Send cognitive update

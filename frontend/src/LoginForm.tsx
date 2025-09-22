@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { User, Mail, Lock, Brain } from "lucide-react";
 
 interface LoginFormProps {
-  onLogin: (username: string, password: string) => Promise<any>;
-  onRegister: (username: string, email: string, password: string) => Promise<any>;
+  onLogin: (username: string, password: string) => Promise<void>;
+  onRegister: (username: string, email: string, password: string) => Promise<void>;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
@@ -153,8 +153,57 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
           </button>
         </div>
       </div>
-
-      
+      <style>{`
+        @keyframes fadeInScale {
+          from {
+            opacity: 0.8;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes float {
+          0%, 100% {
+            transform: scale(1) rotate(0deg);
+          }
+          25% {
+            transform: scale(1.05) rotate(5deg);
+          }
+          75% {
+            transform: scale(1.05) rotate(-5deg);
+          }
+        }
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes expand {
+          from {
+            opacity: 0;
+            max-height: 0;
+          }
+          to {
+            opacity: 1;
+            max-height: 200px;
+          }
+        }
+        @keyframes arrow {
+          0%, 100% {
+            transform: translateX(0);
+          }
+          50% {
+            transform: translateX(4px);
+          }
+        }
+      `}</style>
     </div>
   );
 };

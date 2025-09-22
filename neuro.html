@@ -41,6 +41,7 @@
         .container {
             background: var(--ui-background);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-radius: 20px;
             box-shadow: 0 25px 50px var(--shadow-color);
             width: 100%;
@@ -365,14 +366,35 @@
             </div>
 
             <div class="api-config" id="apiConfig">
+                 <label for="llmProvider" class="llm-label">LLM Provider:</label>
+                 <select id="llmProvider" class="api-input llm-select">
+                     <option value="openai">OpenAI</option>
+                     <option value="meta">Meta</option>
+                 </select>
                  <input type="password" class="api-input" id="apiKeyInput" placeholder="Enter OpenAI API Key (optional)">
+                 <input type="password" class="api-input" id="metaApiKeyInput" placeholder="Enter Meta API Key (optional)">
                  <button class="api-button" onclick="connectLLM()">Connect</button>
                  <button class="api-button secondary" onclick="toggleDemoMode()">Use Demo Mode</button>
-                 <hr style="margin: 15px 0; border: 1px solid var(--border-color);">
+                 <hr class="api-hr">
                  <button class="api-button" onclick="exportState()">Export Agent State</button>
-                 <input type="file" id="importFile" accept=".json" style="display: none;">
+                 <input type="file" id="importFile" accept=".json" class="api-file-hidden">
                  <button class="api-button" onclick="document.getElementById('importFile').click()">Import Agent State</button>
                  <button class="api-button secondary" onclick="resetAgent()">Reset Agent</button>
+        .llm-label {
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+            display: block;
+        }
+        .llm-select {
+            margin-bottom: 10px;
+        }
+        .api-hr {
+            margin: 15px 0;
+            border: 1px solid var(--border-color);
+        }
+        .api-file-hidden {
+            display: none;
+        }
             </div>
             
             <div class="chat-messages" id="chatMessages">
@@ -420,6 +442,8 @@
     class EnhancedLLMReflector {
         constructor() {
             this.apiKey = null;
+            this.metaApiKey = null;
+            this.provider = 'openai';
             this.isConnected = false;
             this.demoMode = true;
             this.enhancedResponses = {
@@ -446,10 +470,15 @@
             };
         }
 
-        setApiKey(key) {
-            this.apiKey = key;
-            this.isConnected = !!key;
-            this.demoMode = !key;
+        setApiKey(key, provider = 'openai') {
+            if (provider === 'openai') {
+                this.apiKey = key;
+            } else if (provider === 'meta') {
+                this.metaApiKey = key;
+            }
+            this.provider = provider;
+            this.isConnected = !!(this.apiKey || this.metaApiKey);
+            this.demoMode = !(this.apiKey || this.metaApiKey);
             this.updateStatus();
         }
 
@@ -468,10 +497,50 @@
         }
 
         async reflectOnInput(userInput, cognitiveContext) {
-            if (this.isConnected && this.apiKey) {
+            // Auto-switch if selected provider key is missing
+            let provider = this.provider;
+            if (provider === 'openai' && !this.apiKey && this.metaApiKey) provider = 'meta';
+            if (provider === 'meta' && !this.metaApiKey && this.apiKey) provider = 'openai';
+
+            if (provider === 'openai' && this.apiKey) {
                 return await this.callOpenAI(userInput, cognitiveContext);
+            } else if (provider === 'meta' && this.metaApiKey) {
+                return await this.callMeta(userInput, cognitiveContext);
             }
             return this.enhancedDemoResponse(userInput, cognitiveContext);
+        }
+
+        async callMeta(userInput, cognitiveContext) {
+            // Example Meta API call (replace endpoint/model as needed)
+            const systemPrompt = `You are Neuro, an evolving cognitive agent with persistent memory and growing beliefs.\nCurrent Context:\n- Mood: ${cognitiveContext.mood}\n- Recent conversation themes: ${cognitiveContext.recentThemes.join(', ')}\n- Your current beliefs: ${cognitiveContext.beliefs.join('; ')}\n- Memory count: ${cognitiveContext.memoryCount}\nRespond as Neuro. Be thoughtful, philosophical, and personally engaged. Ask meaningful questions that show you're learning about the user. Your response should be concise and reflective.`;
+            try {
+                const response = await fetch('https://api.meta.ai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.metaApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'meta-llama-3',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userInput }
+                        ],
+                        max_tokens: 250,
+                        temperature: 0.8
+                    })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message);
+                }
+                const data = await response.json();
+                return data.choices[0].message.content;
+            } catch (error) {
+                console.error('Meta API Error:', error);
+                this.setApiKey(null, 'meta'); // Disconnect on error
+                return `[API Error] My connection to the Meta language model failed. Reverting to demo mode. I will still continue to learn from our conversation.`;
+            }
         }
 
         enhancedDemoResponse(userInput, context) {
@@ -551,7 +620,8 @@
             this.themeTracker.themes = state.themes || [];
             this.moodReg.history = state.moodHistory || [];
             this.kg.nodes = state.knowledgeGraph || {};
-            this.reflector.setApiKey(state.apiKey || null);
+            this.reflector.setApiKey(state.apiKey || null, 'openai');
+            if (state.metaApiKey) this.reflector.setApiKey(state.metaApiKey, 'meta');
             this.moodReg.updateMood(0, true); // Recalculate mood from loaded history
             console.log("Agent state loaded from Local Storage.");
         }
@@ -563,7 +633,8 @@
                 themes: this.themeTracker.themes,
                 moodHistory: this.moodReg.history,
                 knowledgeGraph: this.kg.nodes,
-                apiKey: this.reflector.apiKey
+                apiKey: this.reflector.apiKey,
+                metaApiKey: this.reflector.metaApiKey
             };
         }
         
@@ -834,10 +905,17 @@
         }
         
         window.connectLLM = () => {
+            const provider = document.getElementById('llmProvider').value;
             const apiKey = document.getElementById('apiKeyInput').value;
-            if(apiKey) {
-                neuro.reflector.setApiKey(apiKey);
-                addNeuroMessage("Attempting to connect to the language model...");
+            const metaApiKey = document.getElementById('metaApiKeyInput').value;
+            if (provider === 'openai' && apiKey) {
+                neuro.reflector.setApiKey(apiKey, 'openai');
+                addNeuroMessage("Attempting to connect to the OpenAI language model...");
+            } else if (provider === 'meta' && metaApiKey) {
+                neuro.reflector.setApiKey(metaApiKey, 'meta');
+                addNeuroMessage("Attempting to connect to the Meta language model...");
+            } else {
+                addNeuroMessage("No API key provided for selected provider. Using demo mode or fallback if available.");
             }
         };
 
