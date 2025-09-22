@@ -40,6 +40,9 @@ interface CognitiveState {
   personality_traits: Record<string, number>;
   memory_count: number;
   beliefs: string[];
+  contradictions_detected?: Array<{ type: string; gentle_response: string; confidence: number }>;
+  cognitive_distortions?: Array<{ type: string; gentle_response: string }>;
+  growth_patterns?: Array<{ type: string; encouragement_response: string }>;
 }
 
 interface WebSocketMessage {
@@ -315,14 +318,14 @@ const AppContent: React.FC = () => {
       const host = window.location.host;
       const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
       const protocol = isLocal ? 'http' : 'https';
-      
+
       const response = await fetch(`${protocol}://${backendHost}/api/mental-health/dashboard`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setMentalHealthData(data);
@@ -349,7 +352,7 @@ const AppContent: React.FC = () => {
       const host = window.location.host;
       const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
       const protocol = isLocal ? 'http' : 'https';
-      
+
       const response = await fetch(`${protocol}://${backendHost}/api/associative-recall/test`, {
         method: 'POST',
         headers: {
@@ -358,11 +361,11 @@ const AppContent: React.FC = () => {
         },
         body: JSON.stringify({ message: testMessage })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('🧠 Associative Recall Test Result:', result);
-        
+
         // Add a test message showing the recall capabilities
         const testResultMessage: Message = {
           id: `test_${Date.now()}`,
@@ -384,7 +387,7 @@ const AppContent: React.FC = () => {
       const host = window.location.host;
       const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
       const protocol = isLocal ? 'http' : 'https';
-      
+
       const response = await fetch(`${protocol}://${backendHost}/api/contradiction-detection/test`, {
         method: 'POST',
         headers: {
@@ -393,11 +396,11 @@ const AppContent: React.FC = () => {
         },
         body: JSON.stringify({ message: testMessage })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('🔍 Contradiction Detection Test Result:', result);
-        
+
         // Add a test message showing the contradiction detection capabilities
         const testResultMessage: Message = {
           id: `contradiction_test_${Date.now()}`,
@@ -419,7 +422,7 @@ const AppContent: React.FC = () => {
       const host = window.location.host;
       const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
       const protocol = isLocal ? 'http' : 'https';
-      
+
       const response = await fetch(`${protocol}://${backendHost}/api/semantic-memory/test`, {
         method: 'POST',
         headers: {
@@ -428,11 +431,11 @@ const AppContent: React.FC = () => {
         },
         body: JSON.stringify({ message: testMessage })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('🧠 Semantic Memory Test Result:', result);
-        
+
         // Add a test message showing the semantic memory capabilities
         const testResultMessage: Message = {
           id: `semantic_test_${Date.now()}`,
@@ -454,24 +457,24 @@ const AppContent: React.FC = () => {
       const host = window.location.host;
       const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
       const protocol = isLocal ? 'http' : 'https';
-      
+
       const response = await fetch(`${protocol}://${backendHost}/api/causal-reasoning/comprehensive-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           project_description: testMessage,
           current_challenge: "How to improve user engagement",
           proposed_solution: "Simplify the interface and add gamification elements"
         })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('🔗 Causal Reasoning Test Result:', result);
-        
+
         // Add a test message showing the causal reasoning capabilities
         const testResultMessage: Message = {
           id: `causal_test_${Date.now()}`,
@@ -485,6 +488,42 @@ const AppContent: React.FC = () => {
       console.error('Error testing causal reasoning:', error);
     }
   };
+
+  // Test uncertainty quantification and self-questioning
+  const testUncertaintyQuantification = async (testMessage: string) => {
+    try {
+      const isLocal = window.location.hostname === 'localhost';
+      const host = window.location.host;
+      const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
+      const protocol = isLocal ? 'http' : 'https';
+
+      const response = await fetch(`${protocol}://${backendHost}/api/uncertainty-quantification/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ message: testMessage })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('❓ Uncertainty Quantification Test Result:', result);
+
+        // Add a test message showing the uncertainty quantification and self-questioning capabilities
+        const testResultMessage: Message = {
+          id: `uncertainty_test_${Date.now()}`,
+          role: 'assistant',
+          content: `❓ **Uncertainty Quantification & Self-Questioning Test**\n\n**Uncertainty Detected:** ${result.uncertainty_level * 100}%\n\n**Productive Questions Generated:**\n${result.questions.map((q: string) => `- ${q}`).join('\n')}\n\n**Alternative Approaches Explored:** ${result.alternative_approaches.length > 0 ? result.alternative_approaches.map((approach: string) => `- ${approach}`).join('\n') : 'None prominent'}\n\n**Confidence Score:** ${result.confidence_score.toFixed(2)}`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, testResultMessage]);
+      }
+    } catch (error) {
+      console.error('Error testing uncertainty quantification:', error);
+    }
+  };
+
 
   // Get mood color based on cognitive state
   const getMoodColor = (mood: string) => {
@@ -830,7 +869,7 @@ const AppContent: React.FC = () => {
                 >
                   <motion.div
                     className="bg-gradient-to-r from-purple-400 to-blue-400 h-2 rounded-full"
-                    animate={{ 
+                    animate={{
                       x: [-100, 100, -100],
                       opacity: [0.3, 1, 0.3]
                     }}
@@ -845,11 +884,11 @@ const AppContent: React.FC = () => {
                   Mapping abstract relationships
                 </div>
               </div>
-              
+
               {/* Cross-Domain Bridges */}
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-400">Cross-Domain Bridges</span>
-                <motion.span 
+                <motion.span
                   className="text-blue-400"
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -857,11 +896,11 @@ const AppContent: React.FC = () => {
                   🌉 Active
                 </motion.span>
               </div>
-              
+
               {/* Dormant Concept Detection */}
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-400">Dormant Concepts</span>
-                <motion.span 
+                <motion.span
                   className="text-green-400"
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2.5, repeat: Infinity }}
@@ -869,7 +908,7 @@ const AppContent: React.FC = () => {
                   💡 Surfacing
                 </motion.span>
               </div>
-              
+
               {/* Test Button */}
               <motion.button
                 className="w-full text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-2 py-1 rounded transition-colors mb-2"
@@ -895,7 +934,7 @@ const AppContent: React.FC = () => {
               {/* Cause-Effect Mapping */}
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-400">Cause-Effect Mapping</span>
-                <motion.span 
+                <motion.span
                   className="text-orange-400"
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -903,11 +942,11 @@ const AppContent: React.FC = () => {
                   🔗 Analyzing
                 </motion.span>
               </div>
-              
+
               {/* Analogical Thinking */}
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-400">Analogical Thinking</span>
-                <motion.span 
+                <motion.span
                   className="text-cyan-400"
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2.3, repeat: Infinity }}
@@ -915,11 +954,11 @@ const AppContent: React.FC = () => {
                   🔄 Connecting
                 </motion.span>
               </div>
-              
+
               {/* Consequence Prediction */}
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-400">Consequence Prediction</span>
-                <motion.span 
+                <motion.span
                   className="text-yellow-400"
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2.7, repeat: Infinity }}
@@ -927,16 +966,23 @@ const AppContent: React.FC = () => {
                   ⚠️ Foreseeing
                 </motion.span>
               </div>
-              
+
               {/* Test Button */}
               <motion.button
                 className="w-full text-xs bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 px-2 py-1 rounded transition-colors"
-                onClick={() => testCausalReasoning("When we simplified the interface last time, user engagement increased 40%. This mobile app redesign challenge is similar to our web optimization project.")}
+                onClick={() => testCausalReasoning("We redesigned our mobile app interface to be more intuitive and saw a 40% increase in user engagement. The simplified navigation reduced cognitive load.")}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 Test Causal Reasoning
               </motion.button>
+              <button
+                onClick={() => testUncertaintyQuantification("I think this is definitely the right approach, but I'm not sure how to implement it. Maybe we should just go with the standard solution everyone uses.")}
+                className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                title="Test Uncertainty Quantification & Self-Questioning"
+              >
+                🤔 Test Uncertainty
+              </button>
             </div>
           </motion.div>
 
@@ -1123,7 +1169,7 @@ const AppContent: React.FC = () => {
                 <Heart className="w-4 h-4 text-pink-400" />
                 <span>Mental Health Insights</span>
               </h3>
-              
+
               {/* Wellbeing Score */}
               <div className="mb-4">
                 <div className="flex justify-between text-sm mb-1">
