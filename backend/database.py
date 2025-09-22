@@ -41,6 +41,10 @@ class User(Base):
     patterns = relationship("InteractionPattern", back_populates="user", cascade="all, delete-orphan")
     owned_shared_conversations = relationship("SharedConversation", back_populates="owner")
     shared_conversation_participations = relationship("SharedConversationParticipant", back_populates="user")
+    goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
+    emotional_states = relationship("EmotionalState", back_populates="user", cascade="all, delete-orphan")
+    emotional_patterns = relationship("EmotionalPattern", back_populates="user", cascade="all, delete-orphan")
+    mental_health_insights = relationship("MentalHealthInsight", back_populates="user", cascade="all, delete-orphan")
 
 
 class Conversation(Base):
@@ -201,11 +205,316 @@ class UploadedFile(Base):
     conversation = relationship("Conversation")
     shared_conversation = relationship("SharedConversation")
 
+class Goal(Base):
+    __tablename__ = "goals"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), default="general", index=True)  # career, health, learning, etc.
+    status = Column(String(20), default="active", index=True)  # active, completed, paused, cancelled
+    priority = Column(String(10), default="medium", index=True)  # low, medium, high
+    due_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    last_discussed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    completion_percentage = Column(Float, default=0.0)
+    
+    # Relationship
+    user = relationship("User", back_populates="goals")
+    updates = relationship("GoalUpdate", back_populates="goal", cascade="all, delete-orphan")
+    conversation_topics = relationship("ConversationTopic", back_populates="goal")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_goal_user_status', 'user_id', 'status'),
+        Index('idx_goal_user_priority', 'user_id', 'priority'),
+        Index('idx_goal_user_discussed', 'user_id', 'last_discussed_at'),
+    )
+
+class GoalUpdate(Base):
+    __tablename__ = "goal_updates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True)
+    update_type = Column(String(20), default="progress", index=True)  # progress, status_change, note
+    content = Column(Text, nullable=False)
+    previous_completion = Column(Float, default=0.0)
+    new_completion = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    goal = relationship("Goal", back_populates="updates")
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_goal_update_goal_date', 'goal_id', 'created_at'),
+        Index('idx_goal_update_user_date', 'user_id', 'created_at'),
+    )
+
+class ConversationTopic(Base):
+    __tablename__ = "conversation_topics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=True, index=True)
+    topic_name = Column(String(100), nullable=False, index=True)
+    relevance_score = Column(Float, default=0.0)  # How relevant this topic is to the conversation
+    mentioned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    conversation = relationship("Conversation")
+    goal = relationship("Goal", back_populates="conversation_topics")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_conv_topic_conv_goal', 'conversation_id', 'goal_id'),
+        Index('idx_conv_topic_topic_score', 'topic_name', 'relevance_score'),
+    )
+
+class EmotionalState(Base):
+    __tablename__ = "emotional_states"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True, index=True)
+    
+    # Emotional metrics
+    primary_emotion = Column(String(50), nullable=False, index=True)
+    emotional_intensity = Column(Float, default=0.0)  # 0.0 to 1.0
+    valence = Column(Float, default=0.0)  # -1.0 (negative) to 1.0 (positive)
+    arousal = Column(Float, default=0.0)  # 0.0 (calm) to 1.0 (excited)
+    
+    # Detected emotional keywords
+    detected_emotions = Column(JSON, nullable=True)  # List of all emotions detected
+    emotional_context = Column(Text, nullable=True)  # Context that triggered the emotion
+    
+    # Timestamps
+    detected_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    
+    # Relationships
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    message = relationship("Message")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_emotion_user_date', 'user_id', 'detected_at'),
+        Index('idx_emotion_user_primary', 'user_id', 'primary_emotion'),
+        Index('idx_emotion_intensity', 'user_id', 'emotional_intensity'),
+    )
+
+class EmotionalPattern(Base):
+    __tablename__ = "emotional_patterns"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Pattern identification
+    pattern_type = Column(String(50), nullable=False, index=True)  # "recurring", "escalating", "declining", "cyclical"
+    pattern_name = Column(String(100), nullable=False)  # Human-readable pattern name
+    description = Column(Text, nullable=True)
+    
+    # Pattern metrics
+    frequency = Column(Float, default=0.0)  # How often this pattern occurs
+    severity = Column(Float, default=0.0)  # 0.0 to 1.0, how concerning this pattern is
+    confidence = Column(Float, default=0.0)  # 0.0 to 1.0, confidence in pattern detection
+    
+    # Time-based information
+    first_detected = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_occurrence = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    pattern_duration_days = Column(Integer, default=0)
+    
+    # Pattern data
+    emotions_involved = Column(JSON, nullable=True)  # List of emotions in this pattern
+    triggers = Column(JSON, nullable=True)  # Common triggers for this pattern
+    interventions_tried = Column(JSON, nullable=True)  # What has been tried to address this
+    
+    # Status
+    is_active = Column(Boolean, default=True, index=True)
+    requires_attention = Column(Boolean, default=False, index=True)
+    
+    # Relationships
+    user = relationship("User")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_pattern_user_active', 'user_id', 'is_active'),
+        Index('idx_pattern_user_severity', 'user_id', 'severity'),
+        Index('idx_pattern_attention', 'user_id', 'requires_attention'),
+    )
+
+class MentalHealthInsight(Base):
+    __tablename__ = "mental_health_insights"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    pattern_id = Column(Integer, ForeignKey("emotional_patterns.id"), nullable=True, index=True)
+    
+    # Insight information
+    insight_type = Column(String(50), nullable=False, index=True)  # "warning", "improvement", "recommendation", "milestone"
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    severity_level = Column(String(20), default="low", index=True)  # "low", "medium", "high", "critical"
+    
+    # Recommendations
+    suggested_actions = Column(JSON, nullable=True)  # List of suggested actions
+    helpful_topics = Column(JSON, nullable=True)  # Topics that tend to help this user
+    avoid_topics = Column(JSON, nullable=True)  # Topics that tend to be harmful
+    
+    # Status
+    is_acknowledged = Column(Boolean, default=False)
+    is_resolved = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    user = relationship("User")
+    pattern = relationship("EmotionalPattern")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_insight_user_severity', 'user_id', 'severity_level'),
+        Index('idx_insight_user_unack', 'user_id', 'is_acknowledged'),
+        Index('idx_insight_created', 'created_at'),
+    )
+
+class Hypothesis(Base):
+    __tablename__ = "hypotheses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Hypothesis details
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    hypothesis_type = Column(String(50), nullable=False, index=True)  # "behavioral", "preference", "pattern", "direction"
+    domain = Column(String(50), nullable=False, index=True)  # "ux", "technical", "process", "personal", etc.
+    
+    # Hypothesis metrics
+    confidence_score = Column(Float, default=0.0, index=True)  # 0.0 to 1.0
+    supporting_evidence_count = Column(Integer, default=0)
+    contradicting_evidence_count = Column(Integer, default=0)
+    
+    # Supporting data
+    initial_evidence = Column(JSON, nullable=True)  # Initial observations that led to this hypothesis
+    supporting_conversations = Column(JSON, nullable=True)  # List of conversation IDs that support this
+    contradicting_conversations = Column(JSON, nullable=True)  # List of conversation IDs that contradict this
+    
+    # Status and testing
+    status = Column(String(20), default="active", index=True)  # "active", "confirmed", "refuted", "evolved"
+    is_testable = Column(Boolean, default=True)
+    test_suggestions = Column(JSON, nullable=True)  # Suggested ways to test this hypothesis
+    
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_tested = Column(DateTime, nullable=True)
+    
+    # Evolution tracking
+    evolved_from_id = Column(Integer, ForeignKey("hypotheses.id"), nullable=True)
+    evolved_to_id = Column(Integer, ForeignKey("hypotheses.id"), nullable=True)
+    
+    # Relationships
+    user = relationship("User")
+    evolved_from = relationship("Hypothesis", remote_side=[id], foreign_keys=[evolved_from_id])
+    evidence_items = relationship("HypothesisEvidence", back_populates="hypothesis", cascade="all, delete-orphan")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_hypothesis_user_type', 'user_id', 'hypothesis_type'),
+        Index('idx_hypothesis_user_confidence', 'user_id', 'confidence_score'),
+        Index('idx_hypothesis_status_domain', 'status', 'domain'),
+    )
+
+class HypothesisEvidence(Base):
+    __tablename__ = "hypothesis_evidence"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    hypothesis_id = Column(Integer, ForeignKey("hypotheses.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True, index=True)
+    
+    # Evidence details
+    evidence_type = Column(String(50), nullable=False, index=True)  # "supporting", "contradicting", "clarifying"
+    evidence_description = Column(Text, nullable=False)
+    evidence_strength = Column(Float, default=0.5)  # 0.0 to 1.0, how strong this evidence is
+    
+    # Context
+    extracted_quote = Column(Text, nullable=True)  # Specific quote or data point
+    context_summary = Column(Text, nullable=True)  # Summary of the situation when this evidence emerged
+    
+    # Timestamps
+    discovered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    
+    # Relationships
+    hypothesis = relationship("Hypothesis", back_populates="evidence_items")
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    message = relationship("Message")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_evidence_hyp_type', 'hypothesis_id', 'evidence_type'),
+        Index('idx_evidence_user_strength', 'user_id', 'evidence_strength'),
+    )
+
+class IdeaEvolution(Base):
+    __tablename__ = "idea_evolutions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    
+    # Evolution tracking
+    idea_title = Column(String(200), nullable=False)
+    evolution_stage = Column(String(50), nullable=False, index=True)  # "inception", "development", "refinement", "implementation", "reflection"
+    
+    # Content tracking
+    original_form = Column(Text, nullable=True)  # How the idea first appeared
+    current_form = Column(Text, nullable=False)  # Current state of the idea
+    transformation_description = Column(Text, nullable=True)  # How it changed
+    
+    # Catalyst information
+    catalyst_type = Column(String(50), nullable=True, index=True)  # "frustration", "inspiration", "problem", "opportunity"
+    catalyst_description = Column(Text, nullable=True)  # What triggered this evolution
+    catalyst_quote = Column(Text, nullable=True)  # Specific quote that triggered change
+    
+    # Influence tracking
+    influenced_by = Column(JSON, nullable=True)  # List of previous ideas/conversations that influenced this
+    influences = Column(JSON, nullable=True)  # List of subsequent ideas this influenced
+    
+    # Metrics
+    complexity_score = Column(Float, default=0.0)  # How complex the idea has become
+    novelty_score = Column(Float, default=0.0)  # How novel/original this evolution is
+    feasibility_score = Column(Float, default=0.0)  # How feasible the current form is
+    
+    # Timestamps
+    evolved_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    
+    # Relationships
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_evolution_user_stage', 'user_id', 'evolution_stage'),
+        Index('idx_evolution_catalyst', 'catalyst_type', 'evolved_at'),
+        Index('idx_evolution_user_time', 'user_id', 'evolved_at'),
+    )
+
 # Create tables
 def create_tables():
     """Create database tables"""
     Base.metadata.create_all(bind=engine)
-    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile")
+    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile, Goal, GoalUpdate, ConversationTopic, EmotionalState, EmotionalPattern, MentalHealthInsight, Hypothesis, HypothesisEvidence, IdeaEvolution")
 
 # Database dependency
 def get_db():

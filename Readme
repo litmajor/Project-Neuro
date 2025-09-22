@@ -1,4 +1,5 @@
-# Neuro v2 - Persistent Cognitive Agent & Platform
+
+<old_str># Neuro v2 - Persistent Cognitive Agent & Platform
 
 Neuro v2 is a full-stack, interactive cognitive agent platform. It features a modern web-based chatbot that simulates an evolving, AI-powered mind, with persistent memory, emotional intelligence, and a rich set of features for both users and developers. Neuro v2 now includes a robust backend, advanced frontend, and integration capabilities for real-world applications.
 
@@ -155,4 +156,308 @@ Pull requests and issues are welcome! See the frontend and backend folders for m
 
 ---
 
-Neuro v2 is a next-generation cognitive agent platform for research, education, and creative applications. Try it out, extend it, and help shape the future of AI-powered conversation!
+Neuro v2 is a next-generation cognitive agent platform for research, education, and creative applications. Try it out, extend it, and help shape the future of AI-powered conversation!</old_str>
+<new_str># Neuro v2 - Advanced Cognitive Agent & Mental Health Platform
+
+Neuro v2 is a comprehensive, full-stack cognitive agent platform featuring advanced AI capabilities, persistent memory, emotional intelligence, and specialized mental health support systems. Built with modern web technologies and sophisticated cognitive architectures.
+
+## ✨ Core Capabilities
+
+### 🧠 Advanced Cognitive Architecture
+
+- **Associative Recall System:** Surfaces relevant past information contextually
+  - Semantic memory clustering using concept hierarchies
+  - Cross-domain knowledge bridging
+  - Dormant concept reactivation for creative insights
+  - Pattern-based memory retrieval
+
+- **Context-Sensitive Response Adaptation:** 
+  - Real-time emotional state detection and adaptation
+  - Communication style matching based on user preferences
+  - Historical context integration for personalized responses
+  - Dynamic personality adjustment based on interaction patterns
+
+- **Contradiction Detection & Belief Revision:**
+  - Cognitive distortion identification (all-or-nothing thinking, overgeneralization, etc.)
+  - Gentle contradiction pointing with supportive guidance
+  - Progressive belief updating as users demonstrate growth
+  - Self-perception pattern analysis
+
+### 🎯 Mental Health & Wellness Support
+
+- **Emotional Trajectory Tracking:**
+  - Long-term emotional pattern analysis
+  - Early warning system for concerning trends
+  - Valence and arousal tracking over time
+  - Intervention effectiveness monitoring
+
+- **Pattern Recognition:**
+  - Escalating distress detection
+  - Persistent sadness monitoring
+  - Social isolation indicators
+  - Anger escalation patterns
+  - Self-harm ideation alerts (immediate attention triggers)
+
+- **Personalized Mental Health Insights:**
+  - Evidence-based recommendations
+  - Topics that help vs. harm specific users
+  - Crisis resource integration
+  - Professional help guidance
+
+### 🔬 Causal Reasoning & Project Intelligence
+
+- **Cause-Effect Relationship Mapping:**
+  - Project outcome analysis: "When you simplified the interface, engagement increased 40%"
+  - Automatic pattern extraction from project descriptions
+  - Success factor identification
+
+- **Analogical Thinking:**
+  - Cross-project solution mapping
+  - Domain transfer insights: "This mobile app challenge is similar to your web redesign"
+  - Historical solution retrieval
+
+- **Consequence Prediction:**
+  - Unintended outcome forecasting
+  - Risk assessment for proposed changes
+  - Mitigation strategy suggestions
+
+### 🎨 Hypothesis Formation & Meta-Memory
+
+- **User Pattern Analysis:**
+  - Behavioral preference detection
+  - Decision-making style identification  
+  - Problem-solving approach mapping
+  - Technical complexity preferences
+
+- **Idea Evolution Tracking:**
+  - Catalyst identification (frustration, inspiration, constraints)
+  - Concept development timelines
+  - Novelty and feasibility scoring
+  - Influence relationship mapping
+
+- **Meta-Memory Systems:**
+  - How ideas developed, not just final results
+  - Memory of memory formation
+  - Belief revision tracking
+
+### 🏗️ Goal Management & Progress Tracking
+
+- **Intelligent Goal Detection:**
+  - Automatic goal extraction from conversations
+  - Category classification (career, health, learning, relationships, financial)
+  - Priority assessment and due date management
+
+- **Progress Monitoring:**
+  - Conversation-based progress detection
+  - Automatic completion percentage updates
+  - Milestone recognition and celebration
+  - Follow-up suggestions for stalled goals
+
+- **Goal Relationship Mapping:**
+  - Cross-goal influence tracking
+  - Conversation topic linking
+  - Update timeline visualization
+
+### 🔄 Real-Time Cognitive Processing
+
+- **Streaming Response Generation:**
+  - Token-by-token response streaming
+  - Real-time cognitive state updates
+  - WebSocket-based live updates
+  - Performance-optimized caching
+
+- **Multi-Modal Analysis:**
+  - File upload and analysis
+  - Image processing capabilities
+  - Document content extraction
+  - Code analysis features
+
+## 🎵 Planned Voice Integration: ElevenLabs
+
+### Voice Synthesis Capabilities
+- **Natural Voice Generation:** High-quality text-to-speech using ElevenLabs API
+- **Emotional Voice Adaptation:** Voice tone matching cognitive state
+- **Multiple Voice Models:** Selectable voice personalities
+- **Real-time Audio Streaming:** Low-latency voice response generation
+
+### Implementation Plan
+1. **Backend Integration:**
+   - ElevenLabs API client integration
+   - Audio file generation and caching
+   - Voice model management
+   - Streaming audio response endpoints
+
+2. **Frontend Audio Features:**
+   - Audio playback controls
+   - Voice model selection interface  
+   - Audio waveform visualization
+   - Background audio generation toggle
+
+3. **Voice Personalization:**
+   - User voice preference learning
+   - Emotional state-aware voice adaptation
+   - Context-appropriate speaking style
+   - Voice speed and tone customization
+
+## 🏗️ Technical Architecture
+
+### Backend (Python/FastAPI)
+- **Advanced Cognitive Processors:**
+  - `CognitiveProcessor`: Memory, learning, preference tracking
+  - `EmotionalTrajectoryTracker`: Mental health pattern analysis
+  - `ContradictionDetector`: Belief revision and distortion detection
+  - `CausalReasoningEngine`: Project analysis and analogical thinking
+  - `HypothesisFormationEngine`: Pattern analysis and idea tracking
+  - `ConceptHierarchy`: Semantic memory and creative insight generation
+
+- **Database Architecture:**
+  - User management with personality settings
+  - Conversation and message storage with cognitive state tracking
+  - Goal management with progress tracking
+  - Emotional state and pattern storage
+  - Mental health insights and recommendations
+  - Hypothesis and evidence tracking
+  - Idea evolution timeline storage
+
+- **Performance Optimizations:**
+  - Response caching system
+  - Database query optimization
+  - WebSocket connection management
+  - Streaming response generation
+
+### Frontend (React/TypeScript/Tailwind)
+- **Modern Chat Interface:**
+  - Real-time message streaming
+  - Cognitive state visualization
+  - File upload with preview
+  - Message reactions and feedback
+  - Theme switching (light/dark)
+
+- **Advanced Features:**
+  - Voice recording and playback
+  - Shared conversation spaces
+  - Mental health dashboard
+  - Goal tracking interface
+  - Analytics and insights panels
+
+### Database Schema
+- **Core Tables:** Users, Conversations, Messages, Memories
+- **Goal Management:** Goals, GoalUpdates, ConversationTopics
+- **Mental Health:** EmotionalStates, EmotionalPatterns, MentalHealthInsights
+- **Intelligence:** Hypotheses, HypothesisEvidence, IdeaEvolutions
+- **Preferences:** UserPreferences, InteractionPatterns
+
+## 🚀 Quick Start
+
+### Development Setup
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Frontend  
+cd frontend
+npm install
+npm run dev -- --host 0.0.0.0 --port 5000
+```
+
+### Environment Variables
+```env
+# Required for full functionality
+OPENAI_API_KEY=your_openai_api_key
+ELEVENLABS_API_KEY=your_elevenlabs_api_key  # For voice features
+JWT_SECRET_KEY=your_secret_key
+DATABASE_URL=your_database_url  # Optional, defaults to SQLite
+```
+
+### API Endpoints Overview
+- **Authentication:** `/api/auth/register`, `/api/auth/login`
+- **Chat:** `/api/chat/stream` (streaming responses)
+- **Goals:** `/api/goals/` (CRUD operations)
+- **Mental Health:** `/api/mental-health/trajectory`, `/api/mental-health/patterns`
+- **Intelligence:** `/api/hypothesis-formation/`, `/api/causal-reasoning/`
+- **Testing:** Various `/test` endpoints for capability demonstration
+
+## 🧪 Advanced Testing Features
+
+The platform includes comprehensive testing endpoints for all cognitive capabilities:
+
+- **Associative Recall Testing:** `/api/associative-recall/test`
+- **Contradiction Detection:** `/api/contradiction-detection/test`  
+- **Semantic Memory Clustering:** `/api/semantic-memory/test`
+- **Causal Reasoning Analysis:** `/api/causal-reasoning/extract-relationships`
+- **Hypothesis Formation:** `/api/hypothesis-formation/analyze-patterns`
+- **Mental Health Monitoring:** `/api/mental-health/dashboard`
+
+## 📊 Analytics & Monitoring
+
+- **User Behavior Analytics:** Interaction patterns, session analysis
+- **Mental Health Metrics:** Emotional trajectory trends, intervention effectiveness
+- **Cognitive Performance:** Memory accuracy, pattern recognition success rates
+- **Goal Achievement Tracking:** Completion rates, progress trends
+- **System Performance:** Response times, cache hit rates, connection stability
+
+## 🎯 Use Cases
+
+### Personal Development
+- **Mental Health Support:** Depression/anxiety monitoring, cognitive therapy assistance
+- **Goal Achievement:** Project management, habit formation, progress tracking
+- **Learning Assistant:** Knowledge retention, concept connection, skill development
+- **Creative Partner:** Idea development, creative writing, brainstorming support
+
+### Professional Applications
+- **Project Management:** Pattern analysis, risk prediction, solution recommendation
+- **Team Collaboration:** Shared insights, conversation spaces, knowledge sharing
+- **Customer Support:** Context-aware assistance, emotional intelligence, escalation detection
+- **Research Platform:** Cognitive behavior studies, AI interaction research
+
+### Educational Settings
+- **AI Education:** Demonstrate cognitive architectures, memory systems, learning algorithms
+- **Psychology Training:** Cognitive distortion recognition, therapeutic conversation techniques
+- **Computer Science:** Advanced AI systems, natural language processing, machine learning
+
+## 🔧 Customization & Extensions
+
+### Plugin System (Planned)
+- **Custom Cognitive Processors:** Extend analysis capabilities
+- **Integration Modules:** Connect to external services and APIs
+- **Specialized Domains:** Medical, legal, technical expertise modules
+- **Custom UI Components:** Tailored interfaces for specific use cases
+
+### Configuration Options
+- **Personality Settings:** Creativity, empathy, formality levels
+- **Response Styles:** Detailed vs. concise, technical vs. conversational
+- **Privacy Controls:** Data retention, sharing permissions, anonymization
+- **Feature Toggles:** Enable/disable specific cognitive capabilities
+
+## 🔒 Privacy & Security
+
+- **Data Encryption:** All sensitive data encrypted at rest and in transit
+- **User Isolation:** Complete separation of user data and cognitive states
+- **Configurable Retention:** User-controlled data retention policies
+- **Export Controls:** Full data portability and deletion capabilities
+- **HIPAA Considerations:** Mental health data protection compliance planning
+
+## 🌟 Future Roadmap
+
+### Q1 2025
+- **ElevenLabs Voice Integration:** Natural speech synthesis with emotional adaptation
+- **Mobile App:** Native iOS/Android applications
+- **Advanced Analytics Dashboard:** Comprehensive insights and trends
+
+### Q2 2025  
+- **Multi-Agent Collaboration:** Agent-to-agent communication and shared learning
+- **Plugin Marketplace:** Community-driven extensions and integrations
+- **Enterprise Features:** Team management, admin controls, compliance tools
+
+### Q3 2025
+- **Federated Learning:** Privacy-preserving collaborative model improvement
+- **Advanced Memory Systems:** Episodic memory, working memory simulation
+- **Specialized Clinical Modules:** Licensed therapeutic assistance features
+
+---
+
+**Neuro v2** represents the cutting edge of cognitive AI platforms, combining advanced machine learning with thoughtful human-centered design. Built for researchers, therapists, educators, and individuals seeking a truly intelligent conversational partner.
+
+**Ready to explore the future of AI-human interaction? Start with our demo mode or deploy your own instance on Replit today.**</new_str>
