@@ -41,6 +41,7 @@ class User(Base):
     patterns = relationship("InteractionPattern", back_populates="user", cascade="all, delete-orphan")
     owned_shared_conversations = relationship("SharedConversation", back_populates="owner")
     shared_conversation_participations = relationship("SharedConversationParticipant", back_populates="user")
+    goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
 
 
 class Conversation(Base):
@@ -201,11 +202,83 @@ class UploadedFile(Base):
     conversation = relationship("Conversation")
     shared_conversation = relationship("SharedConversation")
 
+class Goal(Base):
+    __tablename__ = "goals"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), default="general", index=True)  # career, health, learning, etc.
+    status = Column(String(20), default="active", index=True)  # active, completed, paused, cancelled
+    priority = Column(String(10), default="medium", index=True)  # low, medium, high
+    due_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    last_discussed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    completion_percentage = Column(Float, default=0.0)
+    
+    # Relationship
+    user = relationship("User", back_populates="goals")
+    updates = relationship("GoalUpdate", back_populates="goal", cascade="all, delete-orphan")
+    conversation_topics = relationship("ConversationTopic", back_populates="goal")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_goal_user_status', 'user_id', 'status'),
+        Index('idx_goal_user_priority', 'user_id', 'priority'),
+        Index('idx_goal_user_discussed', 'user_id', 'last_discussed_at'),
+    )
+
+class GoalUpdate(Base):
+    __tablename__ = "goal_updates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True)
+    update_type = Column(String(20), default="progress", index=True)  # progress, status_change, note
+    content = Column(Text, nullable=False)
+    previous_completion = Column(Float, default=0.0)
+    new_completion = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    goal = relationship("Goal", back_populates="updates")
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_goal_update_goal_date', 'goal_id', 'created_at'),
+        Index('idx_goal_update_user_date', 'user_id', 'created_at'),
+    )
+
+class ConversationTopic(Base):
+    __tablename__ = "conversation_topics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    goal_id = Column(Integer, ForeignKey("goals.id"), nullable=True, index=True)
+    topic_name = Column(String(100), nullable=False, index=True)
+    relevance_score = Column(Float, default=0.0)  # How relevant this topic is to the conversation
+    mentioned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    conversation = relationship("Conversation")
+    goal = relationship("Goal", back_populates="conversation_topics")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_conv_topic_conv_goal', 'conversation_id', 'goal_id'),
+        Index('idx_conv_topic_topic_score', 'topic_name', 'relevance_score'),
+    )
+
 # Create tables
 def create_tables():
     """Create database tables"""
     Base.metadata.create_all(bind=engine)
-    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile")
+    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile, Goal, GoalUpdate, ConversationTopic")
 
 # Database dependency
 def get_db():

@@ -25,7 +25,7 @@ from sqlalchemy import text, func
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
-from database import create_tables, get_db, User, Conversation, Message, Memory
+from database import create_tables, get_db, User, Conversation, Message, Memory, Goal, GoalUpdate, ConversationTopic
 from auth import (
     UserCreate, UserLogin, UserResponse, Token, PersonalitySettings,
     create_user, authenticate_user, create_access_token, get_current_user, user_to_response
@@ -248,10 +248,70 @@ class TypingStatus(BaseModel):
     shared_conversation_id: int
     is_typing: bool
 
+# Goal Management Models
+class GoalCreate(BaseModel):
+    title: str = Field(..., description="Goal title")
+    description: Optional[str] = Field(None, description="Goal description")
+    category: str = Field(default="general", description="Goal category")
+    priority: str = Field(default="medium", description="Priority: low, medium, high")
+    due_date: Optional[datetime] = Field(None, description="Optional due date")
+
+class GoalUpdateRequest(BaseModel):
+    title: Optional[str] = Field(None, description="Updated goal title")
+    description: Optional[str] = Field(None, description="Updated description")
+    category: Optional[str] = Field(None, description="Updated category")
+    priority: Optional[str] = Field(None, description="Updated priority")
+    status: Optional[str] = Field(None, description="Updated status")
+    due_date: Optional[datetime] = Field(None, description="Updated due date")
+    completion_percentage: Optional[float] = Field(None, description="Updated completion percentage")
+
+class GoalResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str]
+    category: str
+    status: str
+    priority: str
+    due_date: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+    last_discussed_at: datetime
+    completion_percentage: float
+    recent_updates: List[Dict] = []
+
+class GoalUpdateCreate(BaseModel):
+    goal_id: int
+    update_type: str = Field(default="progress", description="Type: progress, status_change, note")
+    content: str = Field(..., description="Update content")
+    new_completion: Optional[float] = Field(None, description="New completion percentage")
+
 class CognitiveProcessor:
     """Advanced cognitive processing for the AI agent"""
 
     def __init__(self):
+        # Goal detection patterns
+        self.goal_keywords = {
+            "career": ["job", "career", "work", "interview", "promotion", "salary", "boss", "colleague", "resume", "application", "hiring"],
+            "health": ["health", "fitness", "exercise", "diet", "weight", "workout", "gym", "doctor", "medicine", "sleep"],
+            "learning": ["learn", "study", "course", "book", "skill", "education", "training", "practice", "improve", "master"],
+            "relationship": ["relationship", "dating", "marriage", "family", "friend", "social", "connect", "communication"],
+            "financial": ["money", "budget", "save", "invest", "debt", "loan", "financial", "income", "expense", "retirement"],
+            "personal": ["goal", "plan", "achieve", "accomplish", "complete", "finish", "start", "begin", "project", "task"]
+        }
+        
+        # Goal progress indicators
+        self.progress_indicators = {
+            "positive": ["completed", "finished", "done", "achieved", "accomplished", "succeeded", "progress", "better", "improved"],
+            "negative": ["failed", "quit", "stopped", "gave up", "postponed", "delayed", "stuck", "difficult", "struggling"],
+            "ongoing": ["working on", "continuing", "still", "in progress", "halfway", "almost", "nearly", "trying"]
+        }
+        
+        # Follow-up triggers
+        self.follow_up_triggers = [
+            "we were discussing", "last time", "remember when", "you mentioned", "continuing from",
+            "how did", "what happened with", "any updates on", "progress on", "status of"
+        ]
+        
         self.emotional_weights = {
             "joy": 2.0, "happiness": 1.8, "excited": 1.5, "love": 2.5,
             "sadness": -1.5, "pain": -2.0, "grief": -2.5, "hurt": -1.8,
@@ -331,6 +391,177 @@ class CognitiveProcessor:
             if emotion in emotions:
                 return category
         return "neutral"
+
+    def detect_goals_in_conversation(self, message: str, ai_response: str, user_id: int, db: Session) -> List[Dict]:
+        """Detect potential goals from conversation content"""
+        text_combined = (message + " " + ai_response).lower()
+        detected_goals = []
+        
+        # Check for goal-related patterns
+        for category, keywords in self.goal_keywords.items():
+            relevance_score = 0
+            found_keywords = []
+            
+            for keyword in keywords:
+                if keyword in text_combined:
+                    relevance_score += 1
+                    found_keywords.append(keyword)
+            
+            if relevance_score >= 2:  # At least 2 related keywords found
+                # Check if this might be a new goal or reference to existing
+                goal_phrases = [
+                    "want to", "need to", "plan to", "going to", "hoping to", 
+                    "trying to", "working on", "goal is", "objective", "aim to"
+                ]
+                
+                is_goal_creation = any(phrase in text_combined for phrase in goal_phrases)
+                
+                if is_goal_creation:
+                    detected_goals.append({
+                        "category": category,
+                        "relevance_score": min(relevance_score / len(keywords), 1.0),
+                        "found_keywords": found_keywords,
+                        "is_new_goal": is_goal_creation,
+                        "suggested_title": self._extract_goal_title(message, found_keywords)
+                    })
+        
+        return detected_goals
+
+    def _extract_goal_title(self, message: str, keywords: List[str]) -> str:
+        """Extract a potential goal title from the message"""
+        # Simple extraction - find sentences containing goal keywords
+        sentences = message.split('.')
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if any(keyword in sentence.lower() for keyword in keywords) and len(sentence) < 100:
+                # Clean up the sentence to make it a goal title
+                sentence = sentence.replace("I want to", "").replace("I need to", "")
+                sentence = sentence.replace("I plan to", "").replace("I'm going to", "")
+                return sentence.strip().capitalize()
+        
+        return f"New {keywords[0]} goal"
+
+    def track_goal_progress(self, message: str, ai_response: str, user_id: int, db: Session) -> List[Dict]:
+        """Track progress updates mentioned in conversation"""
+        text_combined = (message + " " + ai_response).lower()
+        progress_updates = []
+        
+        # Get user's active goals
+        user_goals = db.query(Goal).filter(
+            Goal.user_id == user_id,
+            Goal.status == "active"
+        ).all()
+        
+        for goal in user_goals:
+            goal_keywords = goal.title.lower().split()
+            goal_mentioned = any(keyword in text_combined for keyword in goal_keywords if len(keyword) > 3)
+            
+            if goal_mentioned:
+                # Check for progress indicators
+                progress_type = None
+                confidence = 0.0
+                
+                for prog_type, indicators in self.progress_indicators.items():
+                    matches = sum(1 for indicator in indicators if indicator in text_combined)
+                    if matches > 0:
+                        confidence = min(matches / len(indicators), 1.0)
+                        if confidence > 0.3:  # Only track if reasonably confident
+                            progress_type = prog_type
+                            break
+                
+                if progress_type:
+                    # Estimate completion percentage change
+                    completion_change = 0
+                    if progress_type == "positive":
+                        completion_change = min(20, int(confidence * 30))
+                    elif progress_type == "negative":
+                        completion_change = -min(15, int(confidence * 20))
+                    elif progress_type == "ongoing":
+                        completion_change = min(10, int(confidence * 15))
+                    
+                    progress_updates.append({
+                        "goal_id": goal.id,
+                        "progress_type": progress_type,
+                        "confidence": confidence,
+                        "completion_change": completion_change,
+                        "current_completion": goal.completion_percentage
+                    })
+        
+        return progress_updates
+
+    def generate_follow_up_suggestions(self, user_id: int, db: Session) -> List[Dict]:
+        """Generate follow-up suggestions for incomplete goals"""
+        suggestions = []
+        
+        # Get goals that haven't been discussed recently (more than 3 days)
+        three_days_ago = datetime.now(timezone.utc) - timedelta(days=3)
+        stale_goals = db.query(Goal).filter(
+            Goal.user_id == user_id,
+            Goal.status == "active",
+            Goal.last_discussed_at < three_days_ago,
+            Goal.completion_percentage < 100
+        ).order_by(Goal.priority == "high", Goal.last_discussed_at.asc()).limit(3).all()
+        
+        for goal in stale_goals:
+            days_since = (datetime.now(timezone.utc) - goal.last_discussed_at).days
+            
+            # Generate contextual follow-up message
+            follow_up_messages = [
+                f"How did your {goal.category} goal about '{goal.title}' go? We discussed it {days_since} days ago.",
+                f"I remember you were working on '{goal.title}'. Any updates on your progress?",
+                f"We were talking about your {goal.category} goal '{goal.title}' last week. How are things going?",
+                f"You mentioned wanting to work on '{goal.title}'. Have you made any progress?",
+                f"I'm curious about your '{goal.title}' goal. Any developments since we last talked?"
+            ]
+            
+            suggestions.append({
+                "goal_id": goal.id,
+                "goal_title": goal.title,
+                "category": goal.category,
+                "days_since_discussed": days_since,
+                "completion_percentage": goal.completion_percentage,
+                "follow_up_message": follow_up_messages[min(days_since // 2, len(follow_up_messages) - 1)],
+                "priority": goal.priority
+            })
+        
+        return suggestions
+
+    def link_conversation_to_goals(self, conversation_id: int, detected_goals: List[Dict], user_id: int, db: Session):
+        """Create ConversationTopic entries linking conversations to goals"""
+        for goal_data in detected_goals:
+            # Check if there's an existing goal for this category/topic
+            existing_goal = None
+            
+            if not goal_data.get("is_new_goal", False):
+                # Try to find existing goal
+                category_goals = db.query(Goal).filter(
+                    Goal.user_id == user_id,
+                    Goal.category == goal_data["category"],
+                    Goal.status == "active"
+                ).all()
+                
+                # Simple matching by keywords
+                for goal in category_goals:
+                    goal_words = set(goal.title.lower().split())
+                    found_words = set(goal_data["found_keywords"])
+                    if len(goal_words.intersection(found_words)) >= 2:
+                        existing_goal = goal
+                        break
+            
+            # Create conversation topic entry
+            topic_entry = ConversationTopic(
+                conversation_id=conversation_id,
+                goal_id=existing_goal.id if existing_goal else None,
+                topic_name=goal_data.get("suggested_title", goal_data["category"]),
+                relevance_score=goal_data["relevance_score"]
+            )
+            db.add(topic_entry)
+            
+            # Update goal's last_discussed_at if linked
+            if existing_goal:
+                existing_goal.last_discussed_at = datetime.now(timezone.utc)
+        
+        db.commit()
 
     def update_cognitive_state(self, current_state: CognitiveState, message: str, ai_response: str, user_id: int = None, db: Session = None) -> CognitiveState:
         """Update cognitive state with advanced emotion analysis and preference learning"""
@@ -858,6 +1089,318 @@ async def cache_statistics(
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+# Goal Management API Endpoints
+@app.post("/api/goals/")
+async def create_goal(
+    goal_data: GoalCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new goal for the current user"""
+    goal = Goal(
+        user_id=current_user.id,
+        title=goal_data.title,
+        description=goal_data.description,
+        category=goal_data.category,
+        priority=goal_data.priority,
+        due_date=goal_data.due_date
+    )
+    db.add(goal)
+    db.commit()
+    db.refresh(goal)
+    
+    return {
+        "id": goal.id,
+        "title": goal.title,
+        "description": goal.description,
+        "category": goal.category,
+        "status": goal.status,
+        "priority": goal.priority,
+        "due_date": goal.due_date,
+        "created_at": goal.created_at,
+        "completion_percentage": goal.completion_percentage
+    }
+
+@app.get("/api/goals/")
+@cache_response(ttl=60)  # Cache for 1 minute
+async def get_goals(
+    limit: int = 20,
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's goals with optional filtering"""
+    query = db.query(Goal).filter(Goal.user_id == current_user.id)
+    
+    if status:
+        query = query.filter(Goal.status == status)
+    if category:
+        query = query.filter(Goal.category == category)
+    
+    goals = query.order_by(Goal.last_discussed_at.desc()).limit(limit).all()
+    
+    result = []
+    for goal in goals:
+        recent_updates = db.query(GoalUpdate).filter(
+            GoalUpdate.goal_id == goal.id
+        ).order_by(GoalUpdate.created_at.desc()).limit(3).all()
+        
+        result.append({
+            "id": goal.id,
+            "title": goal.title,
+            "description": goal.description,
+            "category": goal.category,
+            "status": goal.status,
+            "priority": goal.priority,
+            "due_date": goal.due_date,
+            "created_at": goal.created_at,
+            "updated_at": goal.updated_at,
+            "last_discussed_at": goal.last_discussed_at,
+            "completion_percentage": goal.completion_percentage,
+            "recent_updates": [{
+                "id": update.id,
+                "update_type": update.update_type,
+                "content": update.content,
+                "created_at": update.created_at,
+                "new_completion": update.new_completion
+            } for update in recent_updates]
+        })
+    
+    return result
+
+@app.get("/api/goals/{goal_id}")
+@cache_response(ttl=30)  # Cache for 30 seconds
+async def get_goal(
+    goal_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific goal with full details"""
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == current_user.id
+    ).first()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    # Get all updates for this goal
+    updates = db.query(GoalUpdate).filter(
+        GoalUpdate.goal_id == goal_id
+    ).order_by(GoalUpdate.created_at.desc()).all()
+    
+    # Get related conversations
+    related_convs = db.query(ConversationTopic).filter(
+        ConversationTopic.goal_id == goal_id
+    ).limit(5).all()
+    
+    return {
+        "id": goal.id,
+        "title": goal.title,
+        "description": goal.description,
+        "category": goal.category,
+        "status": goal.status,
+        "priority": goal.priority,
+        "due_date": goal.due_date,
+        "created_at": goal.created_at,
+        "updated_at": goal.updated_at,
+        "last_discussed_at": goal.last_discussed_at,
+        "completion_percentage": goal.completion_percentage,
+        "updates": [{
+            "id": update.id,
+            "update_type": update.update_type,
+            "content": update.content,
+            "previous_completion": update.previous_completion,
+            "new_completion": update.new_completion,
+            "created_at": update.created_at
+        } for update in updates],
+        "related_conversations": [{
+            "conversation_id": conv.conversation_id,
+            "topic_name": conv.topic_name,
+            "relevance_score": conv.relevance_score,
+            "mentioned_at": conv.mentioned_at
+        } for conv in related_convs]
+    }
+
+@app.put("/api/goals/{goal_id}")
+async def update_goal(
+    goal_id: int,
+    goal_data: GoalUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a goal"""
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == current_user.id
+    ).first()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    # Track changes for update log
+    changes = []
+    if goal_data.title and goal_data.title != goal.title:
+        changes.append(f"Title changed from '{goal.title}' to '{goal_data.title}'")
+        goal.title = goal_data.title
+    
+    if goal_data.description is not None and goal_data.description != goal.description:
+        changes.append(f"Description updated")
+        goal.description = goal_data.description
+    
+    if goal_data.status and goal_data.status != goal.status:
+        changes.append(f"Status changed from '{goal.status}' to '{goal_data.status}'")
+        goal.status = goal_data.status
+    
+    if goal_data.priority and goal_data.priority != goal.priority:
+        changes.append(f"Priority changed from '{goal.priority}' to '{goal_data.priority}'")
+        goal.priority = goal_data.priority
+    
+    if goal_data.completion_percentage is not None and goal_data.completion_percentage != goal.completion_percentage:
+        changes.append(f"Completion updated from {goal.completion_percentage}% to {goal_data.completion_percentage}%")
+        
+        # Create update log entry
+        update_entry = GoalUpdate(
+            goal_id=goal.id,
+            user_id=current_user.id,
+            update_type="progress",
+            content=f"Progress updated to {goal_data.completion_percentage}%",
+            previous_completion=goal.completion_percentage,
+            new_completion=goal_data.completion_percentage
+        )
+        db.add(update_entry)
+        
+        goal.completion_percentage = goal_data.completion_percentage
+    
+    if goal_data.due_date is not None:
+        goal.due_date = goal_data.due_date
+        changes.append("Due date updated")
+    
+    goal.updated_at = datetime.now(timezone.utc)
+    
+    # If there were significant changes, create an update log
+    if changes:
+        update_entry = GoalUpdate(
+            goal_id=goal.id,
+            user_id=current_user.id,
+            update_type="status_change",
+            content="; ".join(changes),
+            previous_completion=goal.completion_percentage,
+            new_completion=goal.completion_percentage
+        )
+        db.add(update_entry)
+    
+    db.commit()
+    db.refresh(goal)
+    
+    return {
+        "id": goal.id,
+        "title": goal.title,
+        "description": goal.description,
+        "category": goal.category,
+        "status": goal.status,
+        "priority": goal.priority,
+        "due_date": goal.due_date,
+        "updated_at": goal.updated_at,
+        "completion_percentage": goal.completion_percentage
+    }
+
+@app.post("/api/goals/{goal_id}/updates/")
+async def add_goal_update(
+    goal_id: int,
+    update_data: GoalUpdateCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add an update/progress note to a goal"""
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == current_user.id
+    ).first()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    update = GoalUpdate(
+        goal_id=goal_id,
+        user_id=current_user.id,
+        update_type=update_data.update_type,
+        content=update_data.content,
+        previous_completion=goal.completion_percentage,
+        new_completion=update_data.new_completion or goal.completion_percentage
+    )
+    db.add(update)
+    
+    # Update goal completion if provided
+    if update_data.new_completion is not None:
+        goal.completion_percentage = update_data.new_completion
+        goal.updated_at = datetime.now(timezone.utc)
+    
+    # Update last_discussed_at since this is a manual interaction
+    goal.last_discussed_at = datetime.now(timezone.utc)
+    
+    db.commit()
+    db.refresh(update)
+    
+    return {
+        "id": update.id,
+        "goal_id": update.goal_id,
+        "update_type": update.update_type,
+        "content": update.content,
+        "previous_completion": update.previous_completion,
+        "new_completion": update.new_completion,
+        "created_at": update.created_at
+    }
+
+@app.delete("/api/goals/{goal_id}")
+async def delete_goal(
+    goal_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a goal (soft delete by marking as cancelled)"""
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == current_user.id
+    ).first()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    goal.status = "cancelled"
+    goal.updated_at = datetime.now(timezone.utc)
+    
+    # Add deletion note
+    update = GoalUpdate(
+        goal_id=goal_id,
+        user_id=current_user.id,
+        update_type="status_change",
+        content="Goal cancelled/deleted",
+        previous_completion=goal.completion_percentage,
+        new_completion=goal.completion_percentage
+    )
+    db.add(update)
+    
+    db.commit()
+    
+    return {"message": "Goal cancelled successfully"}
+
+@app.get("/api/goals/follow-ups/")
+@cache_response(ttl=300)  # Cache for 5 minutes
+async def get_follow_up_suggestions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get follow-up suggestions for incomplete goals"""
+    suggestions = cognitive_processor.generate_follow_up_suggestions(current_user.id, db)
+    
+    return {
+        "suggestions": suggestions,
+        "count": len(suggestions),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.post("/api/chat/stream")
 async def stream_chat(
     request: StreamChatRequest,
@@ -983,6 +1526,43 @@ async def stream_chat(
             )
             db.add(assistant_message)
 
+            # Goal tracking and conversation analysis
+            detected_goals = cognitive_processor.detect_goals_in_conversation(
+                request.message, full_response, current_user.id, db
+            )
+            
+            progress_updates = cognitive_processor.track_goal_progress(
+                request.message, full_response, current_user.id, db
+            )
+            
+            # Apply progress updates to goals
+            for update in progress_updates:
+                goal = db.query(Goal).filter(Goal.id == update["goal_id"]).first()
+                if goal:
+                    new_completion = max(0, min(100, goal.completion_percentage + update["completion_change"]))
+                    if new_completion != goal.completion_percentage:
+                        # Create progress update record
+                        goal_update = GoalUpdate(
+                            goal_id=goal.id,
+                            user_id=current_user.id,
+                            conversation_id=conversation.id,
+                            update_type="progress",
+                            content=f"Progress detected from conversation: {update['progress_type']} indicators",
+                            previous_completion=goal.completion_percentage,
+                            new_completion=new_completion
+                        )
+                        db.add(goal_update)
+                        
+                        goal.completion_percentage = new_completion
+                        goal.last_discussed_at = datetime.now(timezone.utc)
+                        goal.updated_at = datetime.now(timezone.utc)
+            
+            # Link conversation to detected goals
+            if detected_goals:
+                cognitive_processor.link_conversation_to_goals(
+                    conversation.id, detected_goals, current_user.id, db
+                )
+            
             # Update cognitive state with advanced learning
             current_state = request.cognitive_context or CognitiveState()
             updated_state = cognitive_processor.update_cognitive_state(
