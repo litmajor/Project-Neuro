@@ -447,6 +447,45 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Test causal reasoning
+  const testCausalReasoning = async (testMessage: string) => {
+    try {
+      const isLocal = window.location.hostname === 'localhost';
+      const host = window.location.host;
+      const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
+      const protocol = isLocal ? 'http' : 'https';
+      
+      const response = await fetch(`${protocol}://${backendHost}/api/causal-reasoning/comprehensive-analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ 
+          project_description: testMessage,
+          current_challenge: "How to improve user engagement",
+          proposed_solution: "Simplify the interface and add gamification elements"
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔗 Causal Reasoning Test Result:', result);
+        
+        // Add a test message showing the causal reasoning capabilities
+        const testResultMessage: Message = {
+          id: `causal_test_${Date.now()}`,
+          role: 'assistant',
+          content: `🔗 **Causal Reasoning + Analogical Thinking Test**\n\n**Cause-Effect Relationships:** ${result.causal_relationships.length}\n${result.causal_relationships.map((rel: any) => `- ${rel.cause} → ${rel.effect} (confidence: ${Math.round(rel.confidence * 100)}%)`).join('\n')}\n\n**Analogous Projects:** ${result.analogous_projects.length}\n${result.analogous_projects.map((proj: any) => `- ${proj.source_domain} → ${proj.target_domain}: ${proj.analogy_insight.substring(0, 100)}...`).join('\n')}\n\n**Predicted Consequences:** ${result.consequence_predictions.length}\n${result.consequence_predictions.map((cons: any) => `- ${cons.type === 'positive_consequence' ? '✅' : '⚠️'} ${cons.consequence} (${Math.round(cons.probability * 100)}% likely)`).join('\n')}\n\n**Key Insights:**\n${result.insights_summary.map((insight: string) => `- ${insight}`).join('\n')}`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, testResultMessage]);
+      }
+    } catch (error) {
+      console.error('Error testing causal reasoning:', error);
+    }
+  };
+
   // Get mood color based on cognitive state
   const getMoodColor = (mood: string) => {
     switch (mood) {
@@ -833,12 +872,70 @@ const AppContent: React.FC = () => {
               
               {/* Test Button */}
               <motion.button
-                className="w-full text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-2 py-1 rounded transition-colors"
+                className="w-full text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-2 py-1 rounded transition-colors mb-2"
                 onClick={() => testSemanticMemory("I'm working on a creative project that combines nature patterns with technology design")}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 Test Semantic Memory
+              </motion.button>
+            </div>
+          </motion.div>
+
+          {/* Causal Reasoning System */}
+          <motion.div
+            className="bg-white/10 rounded-xl p-4 mb-6"
+            whileHover={{ scale: 1.02 }}
+          >
+            <h3 className="font-semibold mb-2 flex items-center space-x-2">
+              <Activity className="w-4 h-4 text-orange-400" />
+              <span>Causal Reasoning</span>
+            </h3>
+            <div className="space-y-3">
+              {/* Cause-Effect Mapping */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">Cause-Effect Mapping</span>
+                <motion.span 
+                  className="text-orange-400"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  🔗 Analyzing
+                </motion.span>
+              </div>
+              
+              {/* Analogical Thinking */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">Analogical Thinking</span>
+                <motion.span 
+                  className="text-cyan-400"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2.3, repeat: Infinity }}
+                >
+                  🔄 Connecting
+                </motion.span>
+              </div>
+              
+              {/* Consequence Prediction */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">Consequence Prediction</span>
+                <motion.span 
+                  className="text-yellow-400"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2.7, repeat: Infinity }}
+                >
+                  ⚠️ Foreseeing
+                </motion.span>
+              </div>
+              
+              {/* Test Button */}
+              <motion.button
+                className="w-full text-xs bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 px-2 py-1 rounded transition-colors"
+                onClick={() => testCausalReasoning("When we simplified the interface last time, user engagement increased 40%. This mobile app redesign challenge is similar to our web optimization project.")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Test Causal Reasoning
               </motion.button>
             </div>
           </motion.div>

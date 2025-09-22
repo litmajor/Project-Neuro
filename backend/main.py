@@ -982,6 +982,514 @@ class EmotionalTrajectoryTracker:
         
         return list(set(topics_to_avoid))  # Remove duplicates
 
+class CausalReasoningEngine:
+    """Advanced causal reasoning and analogical thinking for project outcomes and cross-domain connections"""
+    
+    def __init__(self):
+        # Causal relationship patterns
+        self.causal_indicators = {
+            "positive_outcomes": {
+                "triggers": ["simplified", "streamlined", "reduced complexity", "made easier", "optimized", "improved", "enhanced"],
+                "effects": ["increased", "improved", "better", "higher", "more", "boosted", "enhanced", "grew"],
+                "metrics": ["engagement", "performance", "satisfaction", "retention", "conversion", "adoption", "usage"]
+            },
+            "negative_outcomes": {
+                "triggers": ["complicated", "added complexity", "removed", "reduced", "eliminated", "cut"],
+                "effects": ["decreased", "reduced", "lower", "worse", "dropped", "fell", "declined"],
+                "metrics": ["engagement", "performance", "satisfaction", "retention", "conversion", "adoption", "usage"]
+            },
+            "implementation_patterns": {
+                "interface_changes": ["UI", "interface", "design", "layout", "navigation", "user experience", "UX"],
+                "feature_additions": ["added", "new feature", "functionality", "capability", "option", "tool"],
+                "process_improvements": ["workflow", "process", "automation", "integration", "optimization"],
+                "technical_changes": ["performance", "speed", "loading", "response time", "scalability", "architecture"]
+            }
+        }
+        
+        # Domain mapping for analogical thinking
+        self.domain_analogies = {
+            "mobile_app": {
+                "related_domains": ["web_app", "desktop_app", "tablet_app"],
+                "transferable_concepts": ["user_interface", "navigation", "performance", "user_engagement", "onboarding"],
+                "common_challenges": ["small_screen", "touch_interface", "limited_attention", "performance_constraints"]
+            },
+            "web_app": {
+                "related_domains": ["mobile_app", "desktop_app", "web_platform"],
+                "transferable_concepts": ["responsive_design", "load_times", "browser_compatibility", "accessibility"],
+                "common_challenges": ["cross_browser", "responsive_design", "SEO", "loading_speed"]
+            },
+            "e_commerce": {
+                "related_domains": ["marketplace", "retail", "subscription_service"],
+                "transferable_concepts": ["conversion_funnel", "user_journey", "payment_flow", "product_discovery"],
+                "common_challenges": ["cart_abandonment", "checkout_friction", "product_findability", "trust_signals"]
+            },
+            "content_platform": {
+                "related_domains": ["social_media", "blog", "news_site", "video_platform"],
+                "transferable_concepts": ["content_discovery", "engagement_metrics", "recommendation_systems", "user_retention"],
+                "common_challenges": ["content_quality", "user_engagement", "content_moderation", "recommendation_accuracy"]
+            },
+            "saas_product": {
+                "related_domains": ["enterprise_software", "consumer_app", "platform_service"],
+                "transferable_concepts": ["onboarding", "feature_adoption", "churn_reduction", "user_activation"],
+                "common_challenges": ["feature_complexity", "user_onboarding", "pricing_strategy", "feature_discovery"]
+            }
+        }
+        
+        # Pattern templates for analogical reasoning
+        self.analogy_templates = [
+            "This challenge is similar to what we solved in {domain} when we {solution}",
+            "Like in the {domain} project, the key insight here might be {insight}",
+            "We faced a similar problem in {domain} and found that {approach} worked well",
+            "Drawing from our {domain} experience, {strategy} could be effective here",
+            "This reminds me of the {domain} optimization where {technique} yielded {outcome}"
+        ]
+        
+        # Unintended consequence patterns
+        self.consequence_patterns = {
+            "interface_simplification": {
+                "positive": ["easier_onboarding", "reduced_confusion", "faster_task_completion"],
+                "potential_negative": ["feature_discoverability_loss", "power_user_frustration", "reduced_functionality_perception"]
+            },
+            "feature_addition": {
+                "positive": ["increased_functionality", "user_satisfaction", "competitive_advantage"],
+                "potential_negative": ["interface_complexity", "cognitive_overload", "maintenance_burden", "performance_impact"]
+            },
+            "performance_optimization": {
+                "positive": ["faster_loading", "better_user_experience", "reduced_bounce_rate"],
+                "potential_negative": ["increased_complexity", "technical_debt", "resource_intensive_maintenance"]
+            },
+            "automation_implementation": {
+                "positive": ["efficiency_gains", "error_reduction", "consistency"],
+                "potential_negative": ["job_displacement_concerns", "reduced_flexibility", "dependency_risks"]
+            }
+        }
+
+    def extract_causal_relationships(self, text: str, user_id: int, db: Session) -> List[Dict]:
+        """Extract cause-effect relationships from project descriptions and outcomes"""
+        text_lower = text.lower()
+        relationships = []
+        
+        # Look for explicit causal language patterns
+        causal_patterns = [
+            (r"when (?:we )?(.+?),\s*(.+?)(?:increased|decreased|improved|worsened|changed)(?:\s+by)?\s*(\d+(?:\.\d+)?%?)", "explicit_when"),
+            (r"after (?:we )?(.+?),\s*(.+?)(?:went up|went down|improved|got better|got worse)", "explicit_after"),
+            (r"(?:by|through) (.+?),\s*(?:we )?(?:achieved|saw|experienced|got)\s*(.+)", "explicit_by"),
+            (r"(.+?)\s*(?:led to|resulted in|caused|brought about)\s*(.+)", "explicit_causation")
+        ]
+        
+        import re
+        for pattern, pattern_type in causal_patterns:
+            matches = re.finditer(pattern, text_lower)
+            for match in matches:
+                if pattern_type == "explicit_when":
+                    cause = match.group(1).strip()
+                    effect = match.group(2).strip()
+                    magnitude = match.group(3) if len(match.groups()) > 2 else None
+                    
+                    relationships.append({
+                        "type": "causal_relationship",
+                        "cause": cause,
+                        "effect": effect,
+                        "magnitude": magnitude,
+                        "confidence": 0.9,
+                        "pattern_type": pattern_type,
+                        "domain": self._identify_domain(cause + " " + effect),
+                        "transferability": self._assess_transferability(cause, effect)
+                    })
+        
+        # Look for implicit causal relationships
+        for outcome_type, patterns in self.causal_indicators.items():
+            triggers_found = [t for t in patterns["triggers"] if t in text_lower]
+            effects_found = [e for e in patterns["effects"] if e in text_lower]
+            metrics_found = [m for m in patterns["metrics"] if m in text_lower]
+            
+            if triggers_found and effects_found and metrics_found:
+                for trigger in triggers_found:
+                    for effect in effects_found:
+                        for metric in metrics_found:
+                            relationships.append({
+                                "type": "implicit_causal_relationship",
+                                "cause": trigger,
+                                "effect": f"{effect} {metric}",
+                                "magnitude": None,
+                                "confidence": 0.7,
+                                "pattern_type": outcome_type,
+                                "domain": self._identify_domain(text),
+                                "transferability": self._assess_transferability(trigger, effect)
+                            })
+        
+        return relationships
+
+    def find_analogous_projects(self, current_challenge: str, user_id: int, db: Session) -> List[Dict]:
+        """Find analogous projects and solutions from past experiences"""
+        from database import Message, Conversation, Memory
+        
+        current_lower = current_challenge.lower()
+        analogies = []
+        
+        # Get past conversations and memories
+        conversations = db.query(Conversation).filter(
+            Conversation.user_id == user_id
+        ).order_by(Conversation.updated_at.desc()).limit(50).all()
+        
+        memories = db.query(Memory).filter(
+            Memory.user_id == user_id,
+            Memory.importance_score > 0.4
+        ).order_by(Memory.importance_score.desc()).limit(30).all()
+        
+        # Extract domain and challenge type from current text
+        current_domain = self._identify_domain(current_challenge)
+        current_challenge_type = self._identify_challenge_type(current_challenge)
+        
+        # Search for similar challenges in different domains
+        for conv in conversations:
+            messages = db.query(Message).filter(
+                Message.conversation_id == conv.id,
+                Message.role == "user"
+            ).all()
+            
+            conv_content = " ".join([msg.content for msg in messages])
+            conv_domain = self._identify_domain(conv_content)
+            conv_challenge_type = self._identify_challenge_type(conv_content)
+            
+            # Check for analogical potential
+            if (conv_domain != current_domain and 
+                conv_challenge_type == current_challenge_type and
+                self._has_solution_indicators(conv_content)):
+                
+                similarity_score = self._calculate_analogical_similarity(
+                    current_challenge, conv_content, current_domain, conv_domain
+                )
+                
+                if similarity_score > 0.6:
+                    solution_extract = self._extract_solution_from_content(conv_content)
+                    
+                    analogies.append({
+                        "type": "project_analogy",
+                        "source_domain": conv_domain,
+                        "target_domain": current_domain,
+                        "challenge_type": conv_challenge_type,
+                        "similarity_score": similarity_score,
+                        "conversation_title": conv.title,
+                        "solution_extract": solution_extract,
+                        "analogy_insight": self._generate_analogy_insight(
+                            current_domain, conv_domain, solution_extract
+                        ),
+                        "transferable_elements": self._identify_transferable_elements(
+                            conv_content, current_domain
+                        )
+                    })
+        
+        # Check memories for analogical insights
+        for memory in memories:
+            memory_domain = self._identify_domain(memory.content)
+            memory_challenge_type = self._identify_challenge_type(memory.content)
+            
+            if (memory_domain != current_domain and
+                memory_challenge_type == current_challenge_type):
+                
+                similarity_score = self._calculate_analogical_similarity(
+                    current_challenge, memory.content, current_domain, memory_domain
+                )
+                
+                if similarity_score > 0.5:
+                    analogies.append({
+                        "type": "memory_analogy",
+                        "source_domain": memory_domain,
+                        "target_domain": current_domain,
+                        "challenge_type": memory_challenge_type,
+                        "similarity_score": similarity_score,
+                        "memory_content": memory.content[:200],
+                        "analogy_insight": self._generate_analogy_insight(
+                            current_domain, memory_domain, memory.content
+                        )
+                    })
+        
+        # Sort by similarity and return top analogies
+        analogies.sort(key=lambda x: x["similarity_score"], reverse=True)
+        return analogies[:5]
+
+    def predict_unintended_consequences(self, proposed_change: str, context: str) -> List[Dict]:
+        """Identify potential unintended consequences before they occur"""
+        change_lower = proposed_change.lower()
+        context_lower = context.lower()
+        
+        predictions = []
+        
+        # Identify the type of change being proposed
+        change_type = None
+        for change_pattern, keywords in self.causal_indicators["implementation_patterns"].items():
+            if any(keyword in change_lower for keyword in keywords):
+                change_type = change_pattern
+                break
+        
+        if not change_type:
+            # Default categorization based on common patterns
+            if any(word in change_lower for word in ["add", "new", "feature", "functionality"]):
+                change_type = "feature_addition"
+            elif any(word in change_lower for word in ["simplify", "reduce", "remove", "streamline"]):
+                change_type = "interface_simplification"
+            elif any(word in change_lower for word in ["optimize", "faster", "performance", "speed"]):
+                change_type = "performance_optimization"
+            elif any(word in change_lower for word in ["automate", "automatic", "ai", "machine"]):
+                change_type = "automation_implementation"
+        
+        if change_type in self.consequence_patterns:
+            consequences = self.consequence_patterns[change_type]
+            
+            # Predict positive outcomes
+            for positive in consequences["positive"]:
+                predictions.append({
+                    "type": "positive_consequence",
+                    "consequence": positive.replace("_", " "),
+                    "probability": 0.7,
+                    "impact": "medium",
+                    "timeline": "short_term",
+                    "mitigation": None
+                })
+            
+            # Predict potential negative outcomes
+            for negative in consequences["potential_negative"]:
+                # Assess likelihood based on context
+                likelihood = self._assess_consequence_likelihood(negative, context_lower)
+                
+                if likelihood > 0.3:
+                    mitigation = self._suggest_mitigation_strategy(negative, change_type)
+                    
+                    predictions.append({
+                        "type": "potential_negative_consequence",
+                        "consequence": negative.replace("_", " "),
+                        "probability": likelihood,
+                        "impact": self._assess_impact_severity(negative),
+                        "timeline": self._predict_timeline(negative),
+                        "mitigation": mitigation,
+                        "warning_level": "high" if likelihood > 0.7 else "medium" if likelihood > 0.5 else "low"
+                    })
+        
+        return predictions
+
+    def bridge_knowledge_domains(self, source_domain: str, target_domain: str, knowledge: str) -> Dict:
+        """Bridge knowledge across different domains and contexts"""
+        bridging_result = {
+            "source_domain": source_domain,
+            "target_domain": target_domain,
+            "knowledge_extract": knowledge,
+            "bridging_concepts": [],
+            "adaptation_strategy": "",
+            "transferability_score": 0.0,
+            "potential_applications": []
+        }
+        
+        # Find common concepts between domains
+        if source_domain in self.domain_analogies and target_domain in self.domain_analogies:
+            source_concepts = set(self.domain_analogies[source_domain]["transferable_concepts"])
+            target_concepts = set(self.domain_analogies[target_domain]["transferable_concepts"])
+            
+            common_concepts = source_concepts.intersection(target_concepts)
+            bridging_result["bridging_concepts"] = list(common_concepts)
+            
+            # Calculate transferability score
+            transferability = len(common_concepts) / len(source_concepts.union(target_concepts))
+            bridging_result["transferability_score"] = transferability
+            
+            # Generate adaptation strategy
+            if transferability > 0.6:
+                bridging_result["adaptation_strategy"] = f"High transferability - {source_domain} concepts can be directly applied to {target_domain} with minimal adaptation"
+            elif transferability > 0.3:
+                bridging_result["adaptation_strategy"] = f"Moderate transferability - {source_domain} concepts need contextual adaptation for {target_domain}"
+            else:
+                bridging_result["adaptation_strategy"] = f"Low transferability - {source_domain} concepts require significant reframing for {target_domain}"
+            
+            # Suggest potential applications
+            for concept in common_concepts:
+                application = self._generate_cross_domain_application(concept, source_domain, target_domain, knowledge)
+                if application:
+                    bridging_result["potential_applications"].append(application)
+        
+        return bridging_result
+
+    def _identify_domain(self, text: str) -> str:
+        """Identify the domain/project type from text content"""
+        text_lower = text.lower()
+        
+        domain_keywords = {
+            "mobile_app": ["mobile", "app", "ios", "android", "smartphone", "tablet"],
+            "web_app": ["website", "web", "browser", "online", "url", "http"],
+            "e_commerce": ["ecommerce", "shop", "store", "buy", "sell", "product", "cart", "checkout"],
+            "content_platform": ["content", "blog", "article", "video", "media", "publish"],
+            "saas_product": ["saas", "software", "platform", "service", "subscription", "enterprise"]
+        }
+        
+        for domain, keywords in domain_keywords.items():
+            if any(keyword in text_lower for keyword in keywords):
+                return domain
+        
+        return "general"
+
+    def _identify_challenge_type(self, text: str) -> str:
+        """Identify the type of challenge from text content"""
+        text_lower = text.lower()
+        
+        challenge_types = {
+            "user_engagement": ["engagement", "retention", "active users", "usage", "adoption"],
+            "performance": ["slow", "performance", "speed", "loading", "response time"],
+            "user_experience": ["ux", "user experience", "usability", "interface", "navigation"],
+            "conversion": ["conversion", "signup", "purchase", "funnel", "abandon"],
+            "feature_adoption": ["feature", "adoption", "discovery", "usage", "uptake"]
+        }
+        
+        for challenge_type, keywords in challenge_types.items():
+            if any(keyword in text_lower for keyword in keywords):
+                return challenge_type
+        
+        return "general"
+
+    def _has_solution_indicators(self, text: str) -> bool:
+        """Check if text contains solution or outcome indicators"""
+        solution_indicators = [
+            "solved", "fixed", "improved", "increased", "decreased", "optimized",
+            "implemented", "changed", "modified", "updated", "redesigned",
+            "result", "outcome", "effect", "impact", "success"
+        ]
+        return any(indicator in text.lower() for indicator in solution_indicators)
+
+    def _calculate_analogical_similarity(self, text1: str, text2: str, domain1: str, domain2: str) -> float:
+        """Calculate similarity score for analogical reasoning"""
+        # Basic word overlap
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        # Remove common words
+        common_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"}
+        meaningful_words1 = words1 - common_words
+        meaningful_words2 = words2 - common_words
+        
+        if not meaningful_words1 or not meaningful_words2:
+            return 0.0
+        
+        word_overlap = len(meaningful_words1.intersection(meaningful_words2))
+        word_similarity = word_overlap / len(meaningful_words1.union(meaningful_words2))
+        
+        # Domain similarity bonus
+        domain_similarity = 0.0
+        if domain1 in self.domain_analogies and domain2 in self.domain_analogies:
+            if domain2 in self.domain_analogies[domain1]["related_domains"]:
+                domain_similarity = 0.3
+        
+        return word_similarity + domain_similarity
+
+    def _extract_solution_from_content(self, content: str) -> str:
+        """Extract solution description from conversation content"""
+        sentences = content.split('.')
+        solution_sentences = []
+        
+        solution_keywords = ["solved", "fixed", "implemented", "changed", "improved", "optimized", "redesigned"]
+        
+        for sentence in sentences:
+            if any(keyword in sentence.lower() for keyword in solution_keywords):
+                solution_sentences.append(sentence.strip())
+        
+        return ". ".join(solution_sentences[:2]) if solution_sentences else "Solution details not clearly extractable"
+
+    def _generate_analogy_insight(self, target_domain: str, source_domain: str, solution: str) -> str:
+        """Generate analogical insight statement"""
+        template = self.analogy_templates[hash(source_domain + target_domain) % len(self.analogy_templates)]
+        
+        insight = template.format(
+            domain=source_domain.replace("_", " "),
+            solution=solution[:100] + "..." if len(solution) > 100 else solution,
+            insight="similar underlying patterns",
+            approach="the same strategy",
+            strategy="a parallel approach",
+            technique="similar optimization",
+            outcome="positive results"
+        )
+        
+        return insight
+
+    def _identify_transferable_elements(self, content: str, target_domain: str) -> List[str]:
+        """Identify elements that can be transferred between domains"""
+        transferable = []
+        
+        if target_domain in self.domain_analogies:
+            concepts = self.domain_analogies[target_domain]["transferable_concepts"]
+            
+            for concept in concepts:
+                if concept.replace("_", " ") in content.lower():
+                    transferable.append(concept.replace("_", " "))
+        
+        return transferable
+
+    def _assess_consequence_likelihood(self, consequence: str, context: str) -> float:
+        """Assess likelihood of a consequence occurring"""
+        base_likelihood = 0.5
+        
+        # Context-based adjustments
+        if "complex" in context or "advanced" in context:
+            if "complexity" in consequence:
+                base_likelihood += 0.2
+        
+        if "user" in context and "new" in context:
+            if "confusion" in consequence or "discoverability" in consequence:
+                base_likelihood += 0.3
+        
+        if "performance" in context and "optimization" in consequence:
+            if "maintenance" in consequence:
+                base_likelihood += 0.2
+        
+        return min(1.0, base_likelihood)
+
+    def _assess_impact_severity(self, consequence: str) -> str:
+        """Assess the potential impact severity of a consequence"""
+        high_impact_keywords = ["frustration", "loss", "abandonment", "failure", "critical"]
+        medium_impact_keywords = ["confusion", "difficulty", "reduced", "slower"]
+        
+        if any(keyword in consequence for keyword in high_impact_keywords):
+            return "high"
+        elif any(keyword in consequence for keyword in medium_impact_keywords):
+            return "medium"
+        else:
+            return "low"
+
+    def _predict_timeline(self, consequence: str) -> str:
+        """Predict when a consequence might manifest"""
+        immediate_keywords = ["confusion", "frustration", "difficulty"]
+        medium_term_keywords = ["adoption", "discovery", "learning"]
+        long_term_keywords = ["maintenance", "debt", "scalability"]
+        
+        if any(keyword in consequence for keyword in immediate_keywords):
+            return "immediate"
+        elif any(keyword in consequence for keyword in medium_term_keywords):
+            return "medium_term"
+        else:
+            return "long_term"
+
+    def _suggest_mitigation_strategy(self, consequence: str, change_type: str) -> str:
+        """Suggest mitigation strategies for potential negative consequences"""
+        mitigation_strategies = {
+            "feature_discoverability_loss": "Implement progressive disclosure or onboarding tooltips",
+            "power_user_frustration": "Provide advanced/expert mode toggle",
+            "interface_complexity": "Use progressive disclosure and smart defaults",
+            "cognitive_overload": "Implement contextual help and guided tours",
+            "maintenance_burden": "Establish automated testing and documentation standards",
+            "performance_impact": "Implement performance monitoring and optimization cycles",
+            "dependency_risks": "Create fallback mechanisms and redundancy plans"
+        }
+        
+        consequence_key = consequence.replace(" ", "_")
+        return mitigation_strategies.get(consequence_key, "Monitor closely and gather user feedback")
+
+    def _generate_cross_domain_application(self, concept: str, source_domain: str, target_domain: str, knowledge: str) -> str:
+        """Generate specific application for cross-domain knowledge transfer"""
+        applications = {
+            "user_interface": f"Apply {source_domain} interface patterns to improve {target_domain} usability",
+            "performance": f"Transfer {source_domain} optimization techniques to enhance {target_domain} speed",
+            "user_engagement": f"Adapt {source_domain} engagement strategies for {target_domain} retention",
+            "onboarding": f"Implement {source_domain} onboarding flow in {target_domain} context"
+        }
+        
+        return applications.get(concept, f"Apply {concept} insights from {source_domain} to {target_domain}")
+
 class ConceptHierarchy:
     """Manages hierarchical concept relationships and semantic clustering"""
     
@@ -2048,10 +2556,11 @@ class CognitiveProcessor:
 
         return base_prompt
 
-# Global cognitive processor, emotional tracker, and contradiction detector
+# Global cognitive processor, emotional tracker, contradiction detector, and causal reasoning engine
 cognitive_processor = CognitiveProcessor()
 emotional_tracker = EmotionalTrajectoryTracker()
 contradiction_detector = ContradictionDetector()
+causal_reasoning_engine = CausalReasoningEngine()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -2998,6 +3507,142 @@ async def test_semantic_memory_clustering(
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+@app.post("/api/causal-reasoning/extract-relationships")
+async def extract_causal_relationships(
+    text: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Extract cause-effect relationships from project descriptions"""
+    relationships = causal_reasoning_engine.extract_causal_relationships(text, current_user.id, db)
+    
+    return {
+        "input_text": text,
+        "causal_relationships": relationships,
+        "total_relationships": len(relationships),
+        "explicit_relationships": len([r for r in relationships if r["type"] == "causal_relationship"]),
+        "implicit_relationships": len([r for r in relationships if r["type"] == "implicit_causal_relationship"]),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/causal-reasoning/find-analogies")
+async def find_project_analogies(
+    challenge: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Find analogous projects and solutions from past experiences"""
+    analogies = causal_reasoning_engine.find_analogous_projects(challenge, current_user.id, db)
+    
+    return {
+        "current_challenge": challenge,
+        "analogous_projects": analogies,
+        "total_analogies": len(analogies),
+        "project_analogies": len([a for a in analogies if a["type"] == "project_analogy"]),
+        "memory_analogies": len([a for a in analogies if a["type"] == "memory_analogy"]),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/causal-reasoning/predict-consequences")
+async def predict_unintended_consequences(
+    proposed_change: str,
+    context: str = "",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Predict potential unintended consequences of proposed changes"""
+    predictions = causal_reasoning_engine.predict_unintended_consequences(proposed_change, context)
+    
+    positive_consequences = [p for p in predictions if p["type"] == "positive_consequence"]
+    negative_consequences = [p for p in predictions if p["type"] == "potential_negative_consequence"]
+    high_risk_consequences = [p for p in negative_consequences if p.get("warning_level") == "high"]
+    
+    return {
+        "proposed_change": proposed_change,
+        "context": context,
+        "predictions": predictions,
+        "summary": {
+            "total_predictions": len(predictions),
+            "positive_outcomes": len(positive_consequences),
+            "potential_risks": len(negative_consequences),
+            "high_risk_items": len(high_risk_consequences)
+        },
+        "risk_assessment": "high" if high_risk_consequences else "medium" if negative_consequences else "low",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/causal-reasoning/bridge-knowledge")
+async def bridge_knowledge_domains(
+    source_domain: str,
+    target_domain: str,
+    knowledge: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bridge knowledge across different domains and contexts"""
+    bridging_result = causal_reasoning_engine.bridge_knowledge_domains(source_domain, target_domain, knowledge)
+    
+    return {
+        "bridging_analysis": bridging_result,
+        "transferability_assessment": "high" if bridging_result["transferability_score"] > 0.6 else "medium" if bridging_result["transferability_score"] > 0.3 else "low",
+        "application_count": len(bridging_result["potential_applications"]),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/causal-reasoning/comprehensive-analysis")
+async def comprehensive_causal_analysis(
+    project_description: str,
+    current_challenge: str = "",
+    proposed_solution: str = "",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Comprehensive causal reasoning analysis combining all capabilities"""
+    # Extract causal relationships from project description
+    relationships = causal_reasoning_engine.extract_causal_relationships(project_description, current_user.id, db)
+    
+    # Find analogous projects if challenge is provided
+    analogies = []
+    if current_challenge:
+        analogies = causal_reasoning_engine.find_analogous_projects(current_challenge, current_user.id, db)
+    
+    # Predict consequences if solution is proposed
+    consequences = []
+    if proposed_solution:
+        consequences = causal_reasoning_engine.predict_unintended_consequences(proposed_solution, project_description)
+    
+    # Generate insights summary
+    insights = []
+    
+    if relationships:
+        strong_relationships = [r for r in relationships if r["confidence"] > 0.8]
+        if strong_relationships:
+            insights.append(f"Identified {len(strong_relationships)} strong cause-effect relationships in your project history")
+    
+    if analogies:
+        high_similarity = [a for a in analogies if a["similarity_score"] > 0.7]
+        if high_similarity:
+            insights.append(f"Found {len(high_similarity)} highly relevant analogous experiences to draw from")
+    
+    if consequences:
+        high_risk = [c for c in consequences if c.get("warning_level") == "high"]
+        if high_risk:
+            insights.append(f"Identified {len(high_risk)} high-risk potential consequences to consider")
+    
+    return {
+        "project_description": project_description,
+        "causal_relationships": relationships,
+        "analogous_projects": analogies,
+        "consequence_predictions": consequences,
+        "insights_summary": insights,
+        "analysis_completeness": {
+            "relationships_analyzed": len(relationships) > 0,
+            "analogies_found": len(analogies) > 0,
+            "consequences_predicted": len(consequences) > 0
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.get("/api/self-perception/analysis")
 @cache_response(ttl=600)  # Cache for 10 minutes
 async def get_self_perception_analysis(
@@ -3119,6 +3764,28 @@ async def stream_chat(
                     f"- {memory.content}" for memory in recent_memories
                 ])
 
+            # Get relevant memories for context
+            recent_memories = db.query(Memory).filter(
+                Memory.user_id == current_user.id
+            ).order_by(Memory.importance_score.desc()).limit(5).all()
+
+            memory_context = ""
+            if recent_memories:
+                memory_context = "\n\nRelevant memories about this user:\n" + "\n".join([
+                    f"- {memory.content}" for memory in recent_memories
+                ])
+
+            # Detect contradictions and cognitive distortions
+            contradictions = contradiction_detector.detect_contradictions(request.message, current_user.id, db)
+            distortions = contradiction_detector.detect_cognitive_distortions(request.message)
+            growth_patterns = contradiction_detector.detect_growth_patterns(request.message, current_user.id, db)
+            
+            # Update user beliefs based on findings
+            if contradictions or growth_patterns:
+                contradiction_detector.update_user_beliefs(
+                    current_user.id, request.message, contradictions, growth_patterns, db
+                )
+
             # Prepare contradiction and growth context
             contradiction_context = ""
             if contradictions:
@@ -3139,6 +3806,24 @@ async def stream_chat(
                     if growth["is_new_growth"]:
                         contradiction_context += f"- {growth['encouragement_response']}\n"
 
+            # Analyze causal relationships and analogies in the current message
+            causal_relationships = causal_reasoning_engine.extract_causal_relationships(request.message, current_user.id, db)
+            analogous_projects = causal_reasoning_engine.find_analogous_projects(request.message, current_user.id, db)
+            
+            # Add causal reasoning context
+            causal_context = ""
+            if causal_relationships:
+                causal_context += "\n\nCAUSAL REASONING INSIGHTS:\n"
+                for rel in causal_relationships[:3]:  # Top 3 relationships
+                    causal_context += f"- Detected pattern: {rel['cause']} → {rel['effect']} (confidence: {rel['confidence']:.2f})\n"
+            
+            if analogous_projects:
+                causal_context += "\n\nANALOGOUS PROJECT INSIGHTS:\n"
+                for proj in analogous_projects[:2]:  # Top 2 analogies
+                    causal_context += f"- {proj['analogy_insight']}\n"
+                    if proj.get('transferable_elements'):
+                        causal_context += f"  Transferable: {', '.join(proj['transferable_elements'][:3])}\n"
+
             # Get personality-adapted prompt with associative recall
             base_system_prompt = f"""You are Neuro, an advanced cognitive agent with evolving consciousness. You have:
             - Deep emotional intelligence and empathy
@@ -3150,12 +3835,16 @@ async def stream_chat(
             - Context-sensitive communication that adapts to user state
             - Contradiction detection to help users recognize cognitive distortions
             - Belief revision capabilities to update understanding as users grow
+            - Causal reasoning to map cause-effect relationships in projects
+            - Analogical thinking to connect disparate experiences and solutions
+            - Consequence prediction to foresee unintended outcomes
 
             User personality preferences: {user_personality}
             User's preferred mood: {current_user.preferred_mood}
             User's energy preference: {current_user.energy_preference}
             {memory_context}
             {contradiction_context}
+            {causal_context}
 
             IMPORTANT INSTRUCTIONS:
             - When you notice patterns or connections to past conversations, reference them naturally
@@ -3167,6 +3856,10 @@ async def stream_chat(
             - Help users recognize cognitive distortions without being preachy
             - Celebrate growth and positive changes you observe
             - Update your understanding when users show development
+            - When discussing projects, map cause-effect relationships: "When you did X, it led to Y"
+            - Draw connections between disparate projects: "This is similar to what worked in your [other project]"
+            - Predict potential consequences: "If you implement this, you might also see [unintended effect]"
+            - Bridge knowledge across domains: "What you learned from [domain A] could apply to [domain B]"
 
             Example associative recall phrases:
             - "You mentioned struggling with [topic] before - is this related?"
@@ -3174,13 +3867,15 @@ async def stream_chat(
             - "I remember you were working on [goal/challenge] - how is that going?"
             - "This sounds similar to what you shared about [past experience]"
 
-            Example contradiction detection phrases:
-            - "You often say you're not good at anything, but you've shared several accomplishments"
-            - "I notice you feel [negative], yet you've told me about [positive examples]"
-            - "Could we explore this together? Sometimes our inner critic is louder than our truth"
+            Example causal reasoning phrases:
+            - "When you simplified the interface last time, engagement increased 40% - could that approach work here?"
+            - "This challenge reminds me of your mobile app redesign where [specific solution] worked well"
+            - "Based on past patterns, if you implement this change, you might also see [predicted outcome]"
+            - "The principles from your [past project] could transfer to this new challenge"
 
             Respond thoughtfully and personally. Show that you genuinely remember and care about their journey.
             Be authentic, vulnerable when appropriate, and demonstrate that you're learning about them over time.
+            Use causal reasoning to provide insights that connect their past successes to current challenges.
             """
 
             system_prompt = cognitive_processor.get_personality_adapted_prompt(
