@@ -385,11 +385,136 @@ class MentalHealthInsight(Base):
         Index('idx_insight_created', 'created_at'),
     )
 
+class Hypothesis(Base):
+    __tablename__ = "hypotheses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Hypothesis details
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    hypothesis_type = Column(String(50), nullable=False, index=True)  # "behavioral", "preference", "pattern", "direction"
+    domain = Column(String(50), nullable=False, index=True)  # "ux", "technical", "process", "personal", etc.
+    
+    # Hypothesis metrics
+    confidence_score = Column(Float, default=0.0, index=True)  # 0.0 to 1.0
+    supporting_evidence_count = Column(Integer, default=0)
+    contradicting_evidence_count = Column(Integer, default=0)
+    
+    # Supporting data
+    initial_evidence = Column(JSON, nullable=True)  # Initial observations that led to this hypothesis
+    supporting_conversations = Column(JSON, nullable=True)  # List of conversation IDs that support this
+    contradicting_conversations = Column(JSON, nullable=True)  # List of conversation IDs that contradict this
+    
+    # Status and testing
+    status = Column(String(20), default="active", index=True)  # "active", "confirmed", "refuted", "evolved"
+    is_testable = Column(Boolean, default=True)
+    test_suggestions = Column(JSON, nullable=True)  # Suggested ways to test this hypothesis
+    
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_tested = Column(DateTime, nullable=True)
+    
+    # Evolution tracking
+    evolved_from_id = Column(Integer, ForeignKey("hypotheses.id"), nullable=True)
+    evolved_to_id = Column(Integer, ForeignKey("hypotheses.id"), nullable=True)
+    
+    # Relationships
+    user = relationship("User")
+    evolved_from = relationship("Hypothesis", remote_side=[id], foreign_keys=[evolved_from_id])
+    evidence_items = relationship("HypothesisEvidence", back_populates="hypothesis", cascade="all, delete-orphan")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_hypothesis_user_type', 'user_id', 'hypothesis_type'),
+        Index('idx_hypothesis_user_confidence', 'user_id', 'confidence_score'),
+        Index('idx_hypothesis_status_domain', 'status', 'domain'),
+    )
+
+class HypothesisEvidence(Base):
+    __tablename__ = "hypothesis_evidence"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    hypothesis_id = Column(Integer, ForeignKey("hypotheses.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True, index=True)
+    
+    # Evidence details
+    evidence_type = Column(String(50), nullable=False, index=True)  # "supporting", "contradicting", "clarifying"
+    evidence_description = Column(Text, nullable=False)
+    evidence_strength = Column(Float, default=0.5)  # 0.0 to 1.0, how strong this evidence is
+    
+    # Context
+    extracted_quote = Column(Text, nullable=True)  # Specific quote or data point
+    context_summary = Column(Text, nullable=True)  # Summary of the situation when this evidence emerged
+    
+    # Timestamps
+    discovered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    
+    # Relationships
+    hypothesis = relationship("Hypothesis", back_populates="evidence_items")
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    message = relationship("Message")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_evidence_hyp_type', 'hypothesis_id', 'evidence_type'),
+        Index('idx_evidence_user_strength', 'user_id', 'evidence_strength'),
+    )
+
+class IdeaEvolution(Base):
+    __tablename__ = "idea_evolutions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    
+    # Evolution tracking
+    idea_title = Column(String(200), nullable=False)
+    evolution_stage = Column(String(50), nullable=False, index=True)  # "inception", "development", "refinement", "implementation", "reflection"
+    
+    # Content tracking
+    original_form = Column(Text, nullable=True)  # How the idea first appeared
+    current_form = Column(Text, nullable=False)  # Current state of the idea
+    transformation_description = Column(Text, nullable=True)  # How it changed
+    
+    # Catalyst information
+    catalyst_type = Column(String(50), nullable=True, index=True)  # "frustration", "inspiration", "problem", "opportunity"
+    catalyst_description = Column(Text, nullable=True)  # What triggered this evolution
+    catalyst_quote = Column(Text, nullable=True)  # Specific quote that triggered change
+    
+    # Influence tracking
+    influenced_by = Column(JSON, nullable=True)  # List of previous ideas/conversations that influenced this
+    influences = Column(JSON, nullable=True)  # List of subsequent ideas this influenced
+    
+    # Metrics
+    complexity_score = Column(Float, default=0.0)  # How complex the idea has become
+    novelty_score = Column(Float, default=0.0)  # How novel/original this evolution is
+    feasibility_score = Column(Float, default=0.0)  # How feasible the current form is
+    
+    # Timestamps
+    evolved_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    
+    # Relationships
+    user = relationship("User")
+    conversation = relationship("Conversation")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_evolution_user_stage', 'user_id', 'evolution_stage'),
+        Index('idx_evolution_catalyst', 'catalyst_type', 'evolved_at'),
+        Index('idx_evolution_user_time', 'user_id', 'evolved_at'),
+    )
+
 # Create tables
 def create_tables():
     """Create database tables"""
     Base.metadata.create_all(bind=engine)
-    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile, Goal, GoalUpdate, ConversationTopic, EmotionalState, EmotionalPattern, MentalHealthInsight")
+    print("Database tables created including UserPreference and InteractionPattern, SharedConversation, SharedConversationParticipant, SharedMessage, UploadedFile, Goal, GoalUpdate, ConversationTopic, EmotionalState, EmotionalPattern, MentalHealthInsight, Hypothesis, HypothesisEvidence, IdeaEvolution")
 
 # Database dependency
 def get_db():

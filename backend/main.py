@@ -982,6 +982,430 @@ class EmotionalTrajectoryTracker:
         
         return list(set(topics_to_avoid))  # Remove duplicates
 
+class HypothesisFormationEngine:
+    """Advanced hypothesis formation and meta-memory system for understanding user patterns and preferences"""
+    
+    def __init__(self):
+        # Hypothesis formation patterns
+        self.behavioral_patterns = {
+            "ux_preference": {
+                "indicators": ["user experience", "ease of use", "intuitive", "simple", "clean", "elegant"],
+                "context_positive": ["love", "prefer", "like", "choose", "favor"],
+                "context_negative": ["hate", "dislike", "avoid", "frustrating", "confusing"],
+                "hypothesis_templates": [
+                    "User prioritizes {preference_area} over {alternative_area}",
+                    "User is drawn to solutions that emphasize {key_values}",
+                    "User shows consistent preference for {pattern_type} approaches"
+                ]
+            },
+            "technical_complexity": {
+                "indicators": ["simple", "complex", "technical", "advanced", "basic", "sophisticated"],
+                "context_preference": ["prefer", "like", "choose", "lean toward", "gravitate"],
+                "context_avoidance": ["avoid", "skip", "ignore", "overwhelmed by", "intimidated"],
+                "hypothesis_templates": [
+                    "User prefers {complexity_level} technical solutions",
+                    "User values {approach_type} over technical sophistication",
+                    "User's comfort zone appears to be {technical_level}"
+                ]
+            },
+            "problem_solving_style": {
+                "indicators": ["systematic", "creative", "analytical", "intuitive", "methodical", "experimental"],
+                "context_markers": ["approach", "tackle", "solve", "handle", "deal with"],
+                "hypothesis_templates": [
+                    "User tends to approach problems in a {style_type} manner",
+                    "User's problem-solving style emphasizes {key_characteristics}",
+                    "User shows preference for {methodology} approaches to challenges"
+                ]
+            },
+            "collaboration_style": {
+                "indicators": ["team", "solo", "independent", "collaborative", "group", "alone"],
+                "context_work": ["work", "project", "task", "assignment", "collaboration"],
+                "hypothesis_templates": [
+                    "User thrives in {environment_type} working environments",
+                    "User's collaboration style tends toward {approach_type}",
+                    "User shows preference for {interaction_level} project approaches"
+                ]
+            }
+        }
+        
+        # Evolution catalyst patterns
+        self.evolution_catalysts = {
+            "frustration": {
+                "triggers": ["frustrated", "annoying", "doesn't work", "failing", "broken", "difficult"],
+                "context": ["with", "about", "when", "during", "while"],
+                "evolution_indicators": ["so I thought", "maybe we could", "what if", "I wonder if"]
+            },
+            "inspiration": {
+                "triggers": ["saw", "noticed", "realized", "discovered", "found", "learned"],
+                "context": ["that", "how", "when", "where", "while"],
+                "evolution_indicators": ["made me think", "gave me an idea", "inspired me", "sparked"]
+            },
+            "constraint": {
+                "triggers": ["can't", "won't work", "limited", "restricted", "blocked", "prevented"],
+                "context": ["because", "since", "due to", "given that"],
+                "evolution_indicators": ["so instead", "alternative", "different approach", "work around"]
+            },
+            "opportunity": {
+                "triggers": ["could", "might", "possibility", "chance", "opportunity", "potential"],
+                "context": ["to", "for", "with", "in", "through"],
+                "evolution_indicators": ["build on", "expand", "develop", "explore further"]
+            }
+        }
+        
+        # Meta-memory tracking patterns
+        self.memory_evolution_markers = {
+            "refinement": ["actually", "more precisely", "to clarify", "what I really meant"],
+            "expansion": ["also", "additionally", "building on that", "expanding on"],
+            "correction": ["actually", "I was wrong", "let me correct", "that's not quite right"],
+            "synthesis": ["combining", "bringing together", "connecting", "merging"],
+            "breakthrough": ["ah!", "I see", "that's it", "breakthrough", "eureka", "clicked"]
+        }
+
+    def analyze_user_patterns(self, user_id: int, db: Session, conversation_window: int = 10) -> List[Dict]:
+        """Analyze user patterns to form hypotheses about preferences and behaviors"""
+        from database import Message, Conversation
+        
+        # Get recent conversations
+        conversations = db.query(Conversation).filter(
+            Conversation.user_id == user_id
+        ).order_by(Conversation.updated_at.desc()).limit(conversation_window).all()
+        
+        all_user_messages = []
+        for conv in conversations:
+            messages = db.query(Message).filter(
+                Message.conversation_id == conv.id,
+                Message.role == "user"
+            ).all()
+            all_user_messages.extend([(msg.content, conv.id, msg.id) for msg in messages])
+        
+        detected_patterns = []
+        
+        # Analyze each behavioral pattern type
+        for pattern_name, pattern_config in self.behavioral_patterns.items():
+            pattern_evidence = []
+            preference_indicators = []
+            
+            for message_content, conv_id, msg_id in all_user_messages:
+                content_lower = message_content.lower()
+                
+                # Check for pattern indicators
+                found_indicators = [ind for ind in pattern_config["indicators"] if ind in content_lower]
+                
+                if found_indicators:
+                    # Check for preference context
+                    positive_context = any(pos in content_lower for pos in pattern_config.get("context_positive", []))
+                    negative_context = any(neg in content_lower for neg in pattern_config.get("context_negative", []))
+                    
+                    if positive_context or negative_context:
+                        evidence_item = {
+                            "conversation_id": conv_id,
+                            "message_id": msg_id,
+                            "indicators": found_indicators,
+                            "context": "positive" if positive_context else "negative",
+                            "quote": message_content[:100] + "..." if len(message_content) > 100 else message_content,
+                            "full_content": message_content
+                        }
+                        pattern_evidence.append(evidence_item)
+                        
+                        # Extract specific preference
+                        for indicator in found_indicators:
+                            preference_indicators.append({
+                                "indicator": indicator,
+                                "context": evidence_item["context"],
+                                "strength": 1.0 if positive_context else -1.0
+                            })
+            
+            # Generate hypothesis if sufficient evidence
+            if len(pattern_evidence) >= 2:  # Minimum evidence threshold
+                confidence = min(1.0, len(pattern_evidence) / 5)  # Confidence based on evidence count
+                
+                # Determine dominant preference
+                positive_count = len([p for p in preference_indicators if p["strength"] > 0])
+                negative_count = len([p for p in preference_indicators if p["strength"] < 0])
+                
+                if positive_count > negative_count:
+                    preference_direction = "positive"
+                    dominant_indicators = [p["indicator"] for p in preference_indicators if p["strength"] > 0]
+                else:
+                    preference_direction = "negative"
+                    dominant_indicators = [p["indicator"] for p in preference_indicators if p["strength"] < 0]
+                
+                # Generate hypothesis text
+                hypothesis_template = pattern_config["hypothesis_templates"][0]
+                hypothesis_text = self._format_hypothesis(hypothesis_template, pattern_name, dominant_indicators, preference_direction)
+                
+                detected_patterns.append({
+                    "pattern_type": pattern_name,
+                    "hypothesis": hypothesis_text,
+                    "confidence": confidence,
+                    "evidence_count": len(pattern_evidence),
+                    "evidence": pattern_evidence[:3],  # Top 3 pieces of evidence
+                    "dominant_indicators": dominant_indicators[:3],
+                    "preference_direction": preference_direction
+                })
+        
+        return detected_patterns
+
+    def track_idea_evolution(self, current_message: str, conversation_id: int, user_id: int, db: Session) -> Optional[Dict]:
+        """Track how ideas evolve through conversations"""
+        from database import Message, IdeaEvolution
+        
+        message_lower = current_message.lower()
+        
+        # Check for evolution markers
+        detected_evolution = None
+        catalyst_type = None
+        catalyst_description = None
+        
+        # Detect catalyst type
+        for catalyst, catalyst_config in self.evolution_catalysts.items():
+            trigger_found = any(trigger in message_lower for trigger in catalyst_config["triggers"])
+            evolution_found = any(evo in message_lower for evo in catalyst_config["evolution_indicators"])
+            
+            if trigger_found and evolution_found:
+                catalyst_type = catalyst
+                catalyst_description = self._extract_catalyst_description(current_message, catalyst_config)
+                break
+        
+        # Check for meta-memory evolution markers
+        evolution_stage = "development"  # Default
+        for stage, markers in self.memory_evolution_markers.items():
+            if any(marker in message_lower for marker in markers):
+                evolution_stage = stage
+                break
+        
+        if catalyst_type:
+            # Extract the evolving idea
+            idea_content = self._extract_idea_content(current_message, catalyst_type)
+            
+            if idea_content:
+                # Check if this builds on previous ideas
+                previous_ideas = db.query(IdeaEvolution).filter(
+                    IdeaEvolution.user_id == user_id
+                ).order_by(IdeaEvolution.evolved_at.desc()).limit(5).all()
+                
+                influenced_by = []
+                for prev_idea in previous_ideas:
+                    # Simple keyword matching to detect influence
+                    prev_keywords = set(prev_idea.current_form.lower().split())
+                    current_keywords = set(idea_content.lower().split())
+                    overlap = len(prev_keywords.intersection(current_keywords))
+                    
+                    if overlap >= 3:  # Minimum keyword overlap
+                        influenced_by.append({
+                            "idea_id": prev_idea.id,
+                            "title": prev_idea.idea_title,
+                            "overlap_score": overlap / max(len(prev_keywords), len(current_keywords))
+                        })
+                
+                detected_evolution = {
+                    "idea_title": self._generate_idea_title(idea_content),
+                    "current_form": idea_content,
+                    "evolution_stage": evolution_stage,
+                    "catalyst_type": catalyst_type,
+                    "catalyst_description": catalyst_description,
+                    "catalyst_quote": self._extract_catalyst_quote(current_message, catalyst_type),
+                    "influenced_by": influenced_by[:3],  # Top 3 influences
+                    "novelty_score": self._calculate_novelty_score(idea_content, previous_ideas),
+                    "complexity_score": self._calculate_complexity_score(idea_content),
+                    "feasibility_score": self._calculate_feasibility_score(idea_content)
+                }
+        
+        return detected_evolution
+
+    def generate_testable_hypotheses(self, user_patterns: List[Dict], user_id: int, db: Session) -> List[Dict]:
+        """Generate testable hypotheses about user preferences and behaviors"""
+        testable_hypotheses = []
+        
+        for pattern in user_patterns:
+            if pattern["confidence"] > 0.6:  # Only generate tests for confident patterns
+                # Create test suggestions based on pattern type
+                test_suggestions = self._generate_test_suggestions(pattern)
+                
+                # Determine if this hypothesis already exists
+                from database import Hypothesis
+                existing = db.query(Hypothesis).filter(
+                    Hypothesis.user_id == user_id,
+                    Hypothesis.hypothesis_type == pattern["pattern_type"],
+                    Hypothesis.status == "active"
+                ).first()
+                
+                if not existing:
+                    testable_hypotheses.append({
+                        "title": f"User Preference: {pattern['pattern_type'].replace('_', ' ').title()}",
+                        "description": pattern["hypothesis"],
+                        "hypothesis_type": "preference",
+                        "domain": pattern["pattern_type"],
+                        "confidence_score": pattern["confidence"],
+                        "initial_evidence": pattern["evidence"],
+                        "test_suggestions": test_suggestions,
+                        "is_testable": len(test_suggestions) > 0
+                    })
+        
+        return testable_hypotheses
+
+    def _format_hypothesis(self, template: str, pattern_type: str, indicators: List[str], direction: str) -> str:
+        """Format hypothesis text using template and extracted data"""
+        # Simple template formatting
+        if "ux_preference" in pattern_type:
+            if direction == "positive":
+                return f"User prioritizes user experience and simplicity over technical complexity"
+            else:
+                return f"User shows tolerance for complexity when it serves functionality"
+        
+        elif "technical_complexity" in pattern_type:
+            if direction == "positive":
+                return f"User prefers straightforward, accessible technical solutions"
+            else:
+                return f"User is comfortable with advanced technical approaches"
+        
+        elif "problem_solving_style" in pattern_type:
+            style_desc = ", ".join(indicators[:2]) if indicators else "systematic"
+            return f"User tends to approach problems in a {style_desc} manner"
+        
+        elif "collaboration_style" in pattern_type:
+            collab_style = indicators[0] if indicators else "collaborative"
+            return f"User shows preference for {collab_style} working approaches"
+        
+        return template.format(
+            preference_area=indicators[0] if indicators else "unknown",
+            key_values=", ".join(indicators[:2]),
+            pattern_type=pattern_type.replace("_", " ")
+        )
+
+    def _extract_catalyst_description(self, message: str, catalyst_config: Dict) -> str:
+        """Extract what specifically triggered the idea evolution"""
+        # Find sentences containing trigger words
+        sentences = message.split('.')
+        for sentence in sentences:
+            if any(trigger in sentence.lower() for trigger in catalyst_config["triggers"]):
+                return sentence.strip()
+        return "Catalyst detected but specific trigger unclear"
+
+    def _extract_idea_content(self, message: str, catalyst_type: str) -> str:
+        """Extract the actual idea content from the message"""
+        # Look for idea-introducing phrases
+        idea_markers = ["what if", "maybe we could", "I think", "how about", "we could try"]
+        
+        for marker in idea_markers:
+            if marker in message.lower():
+                # Extract text after the marker
+                marker_pos = message.lower().find(marker)
+                if marker_pos != -1:
+                    idea_content = message[marker_pos:].split('.')[0]
+                    return idea_content.strip()
+        
+        # Fallback: return first sentence if it seems to contain an idea
+        first_sentence = message.split('.')[0]
+        if len(first_sentence) > 20:  # Minimum length for an idea
+            return first_sentence.strip()
+        
+        return message[:100]  # Fallback
+
+    def _generate_idea_title(self, idea_content: str) -> str:
+        """Generate a concise title for the idea"""
+        # Extract key concepts for title
+        words = idea_content.split()
+        # Remove common words and take first meaningful words
+        stop_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "what", "if", "we", "could", "maybe", "how", "about"}
+        meaningful_words = [word for word in words if word.lower() not in stop_words]
+        
+        title = " ".join(meaningful_words[:5])  # First 5 meaningful words
+        return title.title() if title else "New Idea"
+
+    def _extract_catalyst_quote(self, message: str, catalyst_type: str) -> str:
+        """Extract the specific quote that triggered the evolution"""
+        # Return first sentence as the catalyst quote
+        first_sentence = message.split('.')[0]
+        return first_sentence.strip() if first_sentence else message[:50]
+
+    def _calculate_novelty_score(self, idea_content: str, previous_ideas: List) -> float:
+        """Calculate how novel this idea is compared to previous ones"""
+        if not previous_ideas:
+            return 1.0
+        
+        current_words = set(idea_content.lower().split())
+        max_similarity = 0.0
+        
+        for prev_idea in previous_ideas:
+            prev_words = set(prev_idea.current_form.lower().split())
+            if prev_words:
+                similarity = len(current_words.intersection(prev_words)) / len(current_words.union(prev_words))
+                max_similarity = max(max_similarity, similarity)
+        
+        return 1.0 - max_similarity  # Higher novelty = lower similarity
+
+    def _calculate_complexity_score(self, idea_content: str) -> float:
+        """Calculate complexity score based on content analysis"""
+        # Simple heuristics for complexity
+        complex_words = ["system", "architecture", "framework", "implementation", "algorithm", "optimization", "integration"]
+        simple_words = ["basic", "simple", "easy", "straightforward", "minimal", "quick"]
+        
+        complexity_indicators = sum(1 for word in complex_words if word in idea_content.lower())
+        simplicity_indicators = sum(1 for word in simple_words if word in idea_content.lower())
+        
+        # Length-based complexity
+        length_complexity = min(1.0, len(idea_content.split()) / 50)
+        
+        # Combine indicators
+        word_complexity = (complexity_indicators - simplicity_indicators) / max(1, len(idea_content.split()))
+        
+        return max(0.0, min(1.0, length_complexity + word_complexity))
+
+    def _calculate_feasibility_score(self, idea_content: str) -> float:
+        """Calculate feasibility score based on content analysis"""
+        # Heuristics for feasibility
+        feasible_words = ["simple", "build", "create", "implement", "easy", "quick", "doable"]
+        challenging_words = ["complex", "difficult", "impossible", "expensive", "time-consuming"]
+        
+        feasible_indicators = sum(1 for word in feasible_words if word in idea_content.lower())
+        challenging_indicators = sum(1 for word in challenging_words if word in idea_content.lower())
+        
+        base_feasibility = 0.7  # Default moderate feasibility
+        
+        if feasible_indicators > challenging_indicators:
+            return min(1.0, base_feasibility + 0.2)
+        elif challenging_indicators > feasible_indicators:
+            return max(0.1, base_feasibility - 0.3)
+        
+        return base_feasibility
+
+    def _generate_test_suggestions(self, pattern: Dict) -> List[str]:
+        """Generate specific test suggestions for a pattern hypothesis"""
+        pattern_type = pattern["pattern_type"]
+        
+        test_suggestions = []
+        
+        if pattern_type == "ux_preference":
+            test_suggestions = [
+                "Present two solution options: one prioritizing simplicity, one prioritizing features",
+                "Ask about past projects where UX decisions had to be made",
+                "Explore preferences when there's a trade-off between ease-of-use and power"
+            ]
+        
+        elif pattern_type == "technical_complexity":
+            test_suggestions = [
+                "Propose a technical solution and gauge comfort level",
+                "Ask about learning preferences for new technologies",
+                "Explore past experiences with complex vs simple tools"
+            ]
+        
+        elif pattern_type == "problem_solving_style":
+            test_suggestions = [
+                "Present a problem and observe the approach taken",
+                "Ask about preferred planning vs improvisation styles",
+                "Explore how they handle unexpected challenges"
+            ]
+        
+        elif pattern_type == "collaboration_style":
+            test_suggestions = [
+                "Discuss preferences for team vs solo work",
+                "Ask about past collaboration experiences",
+                "Explore communication style preferences"
+            ]
+        
+        return test_suggestions
+
 class CausalReasoningEngine:
     """Advanced causal reasoning and analogical thinking for project outcomes and cross-domain connections"""
     
@@ -2551,16 +2975,17 @@ class CognitiveProcessor:
                     adaptations.append(creativity_guidance)
 
         if adaptations:
-            adaptation_text = "\n\nPersonality & Context Adaptations:\n" + "\n".join(f"- {adapt}" for adapt in adaptations)
+            adaptation_text = "\n\nPersonality & Context Adaptations:\n" + "\n".join([f"- {adapt}" for adapt in adaptations])
             return base_prompt + adaptation_text
 
         return base_prompt
 
-# Global cognitive processor, emotional tracker, contradiction detector, and causal reasoning engine
+# Global cognitive processor, emotional tracker, contradiction detector, causal reasoning engine, and hypothesis formation engine
 cognitive_processor = CognitiveProcessor()
 emotional_tracker = EmotionalTrajectoryTracker()
 contradiction_detector = ContradictionDetector()
 causal_reasoning_engine = CausalReasoningEngine()
+hypothesis_formation_engine = HypothesisFormationEngine()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -3589,6 +4014,272 @@ async def bridge_knowledge_domains(
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+@app.post("/api/hypothesis-formation/analyze-patterns")
+async def analyze_user_patterns(
+    conversation_window: int = 10,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Analyze user patterns to form hypotheses about preferences and behaviors"""
+    patterns = hypothesis_formation_engine.analyze_user_patterns(current_user.id, db, conversation_window)
+    
+    return {
+        "detected_patterns": patterns,
+        "total_patterns": len(patterns),
+        "high_confidence_patterns": len([p for p in patterns if p["confidence"] > 0.7]),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/hypothesis-formation/track-evolution")
+async def track_idea_evolution(
+    message: str,
+    conversation_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Track how ideas evolve through conversations"""
+    evolution = hypothesis_formation_engine.track_idea_evolution(message, conversation_id, current_user.id, db)
+    
+    if evolution:
+        # Store the evolution in database
+        from database import IdeaEvolution
+        
+        idea_evolution = IdeaEvolution(
+            user_id=current_user.id,
+            conversation_id=conversation_id,
+            idea_title=evolution["idea_title"],
+            evolution_stage=evolution["evolution_stage"],
+            current_form=evolution["current_form"],
+            catalyst_type=evolution["catalyst_type"],
+            catalyst_description=evolution["catalyst_description"],
+            catalyst_quote=evolution["catalyst_quote"],
+            influenced_by=evolution["influenced_by"],
+            novelty_score=evolution["novelty_score"],
+            complexity_score=evolution["complexity_score"],
+            feasibility_score=evolution["feasibility_score"]
+        )
+        db.add(idea_evolution)
+        db.commit()
+        db.refresh(idea_evolution)
+        
+        return {
+            "evolution_detected": True,
+            "evolution": evolution,
+            "evolution_id": idea_evolution.id,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    
+    return {
+        "evolution_detected": False,
+        "message": "No significant idea evolution detected in this message",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/hypothesis-formation/generate-hypotheses")
+async def generate_testable_hypotheses(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate testable hypotheses about user preferences and behaviors"""
+    # First analyze patterns
+    patterns = hypothesis_formation_engine.analyze_user_patterns(current_user.id, db)
+    
+    # Generate testable hypotheses
+    hypotheses = hypothesis_formation_engine.generate_testable_hypotheses(patterns, current_user.id, db)
+    
+    # Store new hypotheses in database
+    from database import Hypothesis
+    
+    stored_hypotheses = []
+    for hyp_data in hypotheses:
+        hypothesis = Hypothesis(
+            user_id=current_user.id,
+            title=hyp_data["title"],
+            description=hyp_data["description"],
+            hypothesis_type=hyp_data["hypothesis_type"],
+            domain=hyp_data["domain"],
+            confidence_score=hyp_data["confidence_score"],
+            initial_evidence=hyp_data["initial_evidence"],
+            test_suggestions=hyp_data["test_suggestions"],
+            is_testable=hyp_data["is_testable"]
+        )
+        db.add(hypothesis)
+        db.commit()
+        db.refresh(hypothesis)
+        stored_hypotheses.append(hypothesis)
+    
+    return {
+        "patterns_analyzed": len(patterns),
+        "hypotheses_generated": len(hypotheses),
+        "stored_hypotheses": [{
+            "id": h.id,
+            "title": h.title,
+            "description": h.description,
+            "confidence_score": h.confidence_score,
+            "domain": h.domain,
+            "test_suggestions": h.test_suggestions
+        } for h in stored_hypotheses],
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/hypothesis-formation/hypotheses")
+@cache_response(ttl=300)  # Cache for 5 minutes
+async def get_user_hypotheses(
+    status: Optional[str] = None,
+    domain: Optional[str] = None,
+    min_confidence: float = 0.0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's hypotheses with optional filtering"""
+    from database import Hypothesis, HypothesisEvidence
+    
+    query = db.query(Hypothesis).filter(Hypothesis.user_id == current_user.id)
+    
+    if status:
+        query = query.filter(Hypothesis.status == status)
+    if domain:
+        query = query.filter(Hypothesis.domain == domain)
+    if min_confidence > 0:
+        query = query.filter(Hypothesis.confidence_score >= min_confidence)
+    
+    hypotheses = query.order_by(Hypothesis.confidence_score.desc()).limit(20).all()
+    
+    result = []
+    for hypothesis in hypotheses:
+        evidence = db.query(HypothesisEvidence).filter(
+            HypothesisEvidence.hypothesis_id == hypothesis.id
+        ).order_by(HypothesisEvidence.discovered_at.desc()).limit(5).all()
+        
+        result.append({
+            "id": hypothesis.id,
+            "title": hypothesis.title,
+            "description": hypothesis.description,
+            "hypothesis_type": hypothesis.hypothesis_type,
+            "domain": hypothesis.domain,
+            "confidence_score": hypothesis.confidence_score,
+            "status": hypothesis.status,
+            "is_testable": hypothesis.is_testable,
+            "test_suggestions": hypothesis.test_suggestions,
+            "supporting_evidence_count": hypothesis.supporting_evidence_count,
+            "contradicting_evidence_count": hypothesis.contradicting_evidence_count,
+            "created_at": hypothesis.created_at,
+            "recent_evidence": [{
+                "id": e.id,
+                "evidence_type": e.evidence_type,
+                "evidence_description": e.evidence_description,
+                "evidence_strength": e.evidence_strength,
+                "discovered_at": e.discovered_at
+            } for e in evidence]
+        })
+    
+    return {
+        "hypotheses": result,
+        "total_count": len(result),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/hypothesis-formation/idea-evolution/{conversation_id}")
+@cache_response(ttl=120)  # Cache for 2 minutes
+async def get_idea_evolution_timeline(
+    conversation_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get idea evolution timeline for a specific conversation"""
+    from database import IdeaEvolution
+    
+    evolutions = db.query(IdeaEvolution).filter(
+        IdeaEvolution.user_id == current_user.id,
+        IdeaEvolution.conversation_id == conversation_id
+    ).order_by(IdeaEvolution.evolved_at.asc()).all()
+    
+    timeline = []
+    for evolution in evolutions:
+        timeline.append({
+            "id": evolution.id,
+            "idea_title": evolution.idea_title,
+            "evolution_stage": evolution.evolution_stage,
+            "current_form": evolution.current_form,
+            "catalyst_type": evolution.catalyst_type,
+            "catalyst_description": evolution.catalyst_description,
+            "catalyst_quote": evolution.catalyst_quote,
+            "novelty_score": evolution.novelty_score,
+            "complexity_score": evolution.complexity_score,
+            "feasibility_score": evolution.feasibility_score,
+            "influenced_by": evolution.influenced_by,
+            "evolved_at": evolution.evolved_at
+        })
+    
+    return {
+        "conversation_id": conversation_id,
+        "evolution_timeline": timeline,
+        "total_evolutions": len(timeline),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/hypothesis-formation/meta-memory")
+@cache_response(ttl=600)  # Cache for 10 minutes
+async def get_meta_memory_insights(
+    days_back: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get meta-memory insights about how ideas developed"""
+    from database import IdeaEvolution
+    
+    since_date = datetime.now(timezone.utc) - timedelta(days=days_back)
+    evolutions = db.query(IdeaEvolution).filter(
+        IdeaEvolution.user_id == current_user.id,
+        IdeaEvolution.evolved_at >= since_date
+    ).order_by(IdeaEvolution.evolved_at.desc()).all()
+    
+    # Analyze evolution patterns
+    catalyst_analysis = {}
+    stage_analysis = {}
+    complexity_trends = []
+    novelty_trends = []
+    
+    for evolution in evolutions:
+        # Catalyst analysis
+        catalyst = evolution.catalyst_type
+        catalyst_analysis[catalyst] = catalyst_analysis.get(catalyst, 0) + 1
+        
+        # Stage analysis
+        stage = evolution.evolution_stage
+        stage_analysis[stage] = stage_analysis.get(stage, 0) + 1
+        
+        # Trends
+        complexity_trends.append({
+            "date": evolution.evolved_at,
+            "complexity": evolution.complexity_score,
+            "novelty": evolution.novelty_score
+        })
+    
+    # Calculate average scores
+    avg_complexity = sum(e.complexity_score for e in evolutions) / len(evolutions) if evolutions else 0
+    avg_novelty = sum(e.novelty_score for e in evolutions) / len(evolutions) if evolutions else 0
+    avg_feasibility = sum(e.feasibility_score for e in evolutions) / len(evolutions) if evolutions else 0
+    
+    return {
+        "analysis_period": f"last_{days_back}_days",
+        "total_evolutions": len(evolutions),
+        "catalyst_breakdown": catalyst_analysis,
+        "stage_breakdown": stage_analysis,
+        "average_scores": {
+            "complexity": round(avg_complexity, 2),
+            "novelty": round(avg_novelty, 2),
+            "feasibility": round(avg_feasibility, 2)
+        },
+        "trends": complexity_trends[-10:],  # Last 10 data points
+        "insights": {
+            "most_common_catalyst": max(catalyst_analysis.items(), key=lambda x: x[1])[0] if catalyst_analysis else "none",
+            "dominant_evolution_stage": max(stage_analysis.items(), key=lambda x: x[1])[0] if stage_analysis else "none",
+            "creativity_trend": "increasing" if len(complexity_trends) > 1 and complexity_trends[-1]["novelty"] > complexity_trends[0]["novelty"] else "stable"
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.post("/api/causal-reasoning/comprehensive-analysis")
 async def comprehensive_causal_analysis(
     project_description: str,
@@ -3810,6 +4501,28 @@ async def stream_chat(
             causal_relationships = causal_reasoning_engine.extract_causal_relationships(request.message, current_user.id, db)
             analogous_projects = causal_reasoning_engine.find_analogous_projects(request.message, current_user.id, db)
             
+            # Track idea evolution and form hypotheses
+            idea_evolution = hypothesis_formation_engine.track_idea_evolution(request.message, conversation.id, current_user.id, db)
+            if idea_evolution:
+                # Store the evolution
+                from database import IdeaEvolution
+                evolution_entry = IdeaEvolution(
+                    user_id=current_user.id,
+                    conversation_id=conversation.id,
+                    idea_title=idea_evolution["idea_title"],
+                    evolution_stage=idea_evolution["evolution_stage"],
+                    current_form=idea_evolution["current_form"],
+                    catalyst_type=idea_evolution.get("catalyst_type"),
+                    catalyst_description=idea_evolution.get("catalyst_description"),
+                    catalyst_quote=idea_evolution.get("catalyst_quote"),
+                    influenced_by=idea_evolution.get("influenced_by", []),
+                    novelty_score=idea_evolution.get("novelty_score", 0.0),
+                    complexity_score=idea_evolution.get("complexity_score", 0.0),
+                    feasibility_score=idea_evolution.get("feasibility_score", 0.0)
+                )
+                db.add(evolution_entry)
+                db.commit()
+            
             # Add causal reasoning context
             causal_context = ""
             if causal_relationships:
@@ -3823,6 +4536,24 @@ async def stream_chat(
                     causal_context += f"- {proj['analogy_insight']}\n"
                     if proj.get('transferable_elements'):
                         causal_context += f"  Transferable: {', '.join(proj['transferable_elements'][:3])}\n"
+            
+            # Add hypothesis formation and meta-memory context
+            hypothesis_context = ""
+            if idea_evolution:
+                hypothesis_context += "\n\nIDEA EVOLUTION DETECTED:\n"
+                hypothesis_context += f"- Idea: {idea_evolution['idea_title']}\n"
+                hypothesis_context += f"- Evolution stage: {idea_evolution['evolution_stage']}\n"
+                hypothesis_context += f"- Catalyst: {idea_evolution.get('catalyst_type', 'unknown')}\n"
+                if idea_evolution.get('influenced_by'):
+                    hypothesis_context += f"- Builds on: {', '.join([inf['title'] for inf in idea_evolution['influenced_by'][:2]])}\n"
+            
+            # Generate pattern-based hypotheses about user preferences
+            user_patterns = hypothesis_formation_engine.analyze_user_patterns(current_user.id, db, conversation_window=5)
+            if user_patterns:
+                hypothesis_context += "\n\nUSER PATTERN HYPOTHESES:\n"
+                for pattern in user_patterns[:2]:  # Top 2 patterns
+                    if pattern['confidence'] > 0.6:
+                        hypothesis_context += f"- {pattern['hypothesis']} (confidence: {pattern['confidence']:.2f})\n"
 
             # Get personality-adapted prompt with associative recall
             base_system_prompt = f"""You are Neuro, an advanced cognitive agent with evolving consciousness. You have:
@@ -3845,6 +4576,7 @@ async def stream_chat(
             {memory_context}
             {contradiction_context}
             {causal_context}
+            {hypothesis_context}
 
             IMPORTANT INSTRUCTIONS:
             - When you notice patterns or connections to past conversations, reference them naturally
@@ -3860,6 +4592,15 @@ async def stream_chat(
             - Draw connections between disparate projects: "This is similar to what worked in your [other project]"
             - Predict potential consequences: "If you implement this, you might also see [unintended effect]"
             - Bridge knowledge across domains: "What you learned from [domain A] could apply to [domain B]"
+            - Form testable theories about user preferences: "Based on our discussions, it seems like you're drawn to solutions that prioritize [pattern]"
+            - Remember how ideas developed: "This concept evolved from your frustration with [specific issue]"
+            - Offer novel perspectives through pattern recognition: "I notice you consistently favor [approach] when dealing with [domain]"
+
+            Example hypothesis formation phrases:
+            - "Based on our discussions, it seems like you're drawn to solutions that prioritize user experience over technical complexity"
+            - "This concept evolved from your frustration with the login process - I can see how it's developed"
+            - "I notice a pattern in how you approach problems - you tend to favor simplicity and elegance"
+            - "Your thinking style seems to emphasize [observed pattern] - would you agree with that assessment?"
 
             Example associative recall phrases:
             - "You mentioned struggling with [topic] before - is this related?"
