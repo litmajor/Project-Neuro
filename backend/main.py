@@ -289,6 +289,49 @@ class CognitiveProcessor:
     """Advanced cognitive processing for the AI agent"""
 
     def __init__(self):
+        # Enhanced associative recall patterns
+        self.recall_triggers = {
+            "routine": ["morning", "wake up", "get up", "start day", "breakfast", "coffee", "schedule"],
+            "struggle": ["difficult", "hard", "challenge", "problem", "issue", "trouble", "stuck", "frustrated"],
+            "emotions": ["feel", "feeling", "emotion", "mood", "angry", "sad", "happy", "anxious", "stressed"],
+            "habits": ["habit", "routine", "daily", "regularly", "always", "usually", "often", "tend to"],
+            "work": ["job", "work", "office", "meeting", "deadline", "project", "boss", "colleague"],
+            "health": ["tired", "energy", "sleep", "exercise", "diet", "sick", "doctor", "pain"],
+            "relationships": ["partner", "friend", "family", "parent", "child", "spouse", "date", "social"],
+            "learning": ["learn", "study", "read", "practice", "skill", "course", "education", "growth"],
+            "goals": ["goal", "plan", "want to", "hoping", "trying", "working on", "achieve", "accomplish"],
+            "time": ["time", "schedule", "busy", "free", "calendar", "appointment", "deadline", "urgent"]
+        }
+        
+        # Context-sensitive response patterns
+        self.response_adaptations = {
+            "struggling": {
+                "tone": "supportive and gentle",
+                "approach": "offer understanding and practical help",
+                "language": "reassuring and non-judgmental"
+            },
+            "excited": {
+                "tone": "enthusiastic and encouraging",
+                "approach": "match their energy and explore the positive momentum",
+                "language": "celebratory and forward-looking"
+            },
+            "confused": {
+                "tone": "patient and clarifying",
+                "approach": "break things down and provide clear guidance",
+                "language": "simple and step-by-step"
+            },
+            "tired": {
+                "tone": "understanding and gentle",
+                "approach": "focus on rest and self-care",
+                "language": "calm and soothing"
+            },
+            "motivated": {
+                "tone": "energetic and action-oriented",
+                "approach": "help channel motivation into concrete steps",
+                "language": "empowering and goal-focused"
+            }
+        }
+        
         # Goal detection patterns
         self.goal_keywords = {
             "career": ["job", "career", "work", "interview", "promotion", "salary", "boss", "colleague", "resume", "application", "hiring"],
@@ -678,8 +721,189 @@ class CognitiveProcessor:
 
         db.commit()
 
-    def get_personality_adapted_prompt(self, user_id: int, base_prompt: str, db: Session) -> str:
-        """Adapt system prompt based on learned user preferences and personality"""
+    def find_associative_memories(self, current_message: str, user_id: int, db: Session) -> List[Dict]:
+        """Find relevant memories through associative recall"""
+        from database import Memory, Message, Conversation
+        
+        current_lower = current_message.lower()
+        relevant_memories = []
+        
+        # Find triggered recall categories
+        triggered_categories = []
+        for category, keywords in self.recall_triggers.items():
+            if any(keyword in current_lower for keyword in keywords):
+                triggered_categories.append(category)
+        
+        if not triggered_categories:
+            return []
+        
+        # Search memories for relevant content
+        memories = db.query(Memory).filter(
+            Memory.user_id == user_id,
+            Memory.importance_score > 0.3
+        ).order_by(Memory.importance_score.desc()).limit(20).all()
+        
+        for memory in memories:
+            memory_content = memory.content.lower()
+            relevance_score = 0
+            
+            # Check if memory contains relevant keywords
+            for category in triggered_categories:
+                category_keywords = self.recall_triggers[category]
+                matches = sum(1 for keyword in category_keywords if keyword in memory_content)
+                if matches > 0:
+                    relevance_score += matches / len(category_keywords)
+            
+            if relevance_score > 0.2:  # Threshold for relevance
+                relevant_memories.append({
+                    "content": memory.content,
+                    "category": memory.category,
+                    "relevance_score": relevance_score,
+                    "created_at": memory.created_at,
+                    "importance": memory.importance_score
+                })
+        
+        # Sort by relevance and return top 3
+        relevant_memories.sort(key=lambda x: x["relevance_score"] * x["importance"], reverse=True)
+        return relevant_memories[:3]
+    
+    def find_related_conversations(self, current_message: str, user_id: int, db: Session) -> List[Dict]:
+        """Find past conversations with similar themes"""
+        from database import Message, Conversation
+        
+        current_lower = current_message.lower()
+        
+        # Get recent conversations (last 30 days)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        conversations = db.query(Conversation).filter(
+            Conversation.user_id == user_id,
+            Conversation.updated_at > thirty_days_ago
+        ).order_by(Conversation.updated_at.desc()).limit(10).all()
+        
+        related_convs = []
+        
+        for conv in conversations:
+            # Get messages from this conversation
+            messages = db.query(Message).filter(
+                Message.conversation_id == conv.id,
+                Message.role == "user"  # Focus on user messages
+            ).limit(5).all()
+            
+            # Calculate thematic similarity
+            similarity_score = 0
+            message_contents = [msg.content.lower() for msg in messages]
+            combined_content = " ".join(message_contents)
+            
+            # Check for keyword overlap
+            current_words = set(current_lower.split())
+            conv_words = set(combined_content.split())
+            
+            # Find meaningful word overlap (exclude common words)
+            common_words = ["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"]
+            meaningful_current = current_words - set(common_words)
+            meaningful_conv = conv_words - set(common_words)
+            
+            if meaningful_current and meaningful_conv:
+                overlap = len(meaningful_current.intersection(meaningful_conv))
+                similarity_score = overlap / max(len(meaningful_current), len(meaningful_conv))
+            
+            if similarity_score > 0.2:  # Threshold for relevance
+                related_convs.append({
+                    "conversation_id": conv.id,
+                    "title": conv.title,
+                    "similarity_score": similarity_score,
+                    "updated_at": conv.updated_at,
+                    "sample_messages": message_contents[:2]  # First 2 user messages
+                })
+        
+        # Sort by similarity and return top 2
+        related_convs.sort(key=lambda x: x["similarity_score"], reverse=True)
+        return related_convs[:2]
+    
+    def detect_user_state(self, message: str, user_id: int, db: Session) -> Dict:
+        """Detect user's current emotional and contextual state"""
+        message_lower = message.lower()
+        
+        # Detect emotional indicators
+        emotional_state = "neutral"
+        emotional_intensity = 0.5
+        
+        struggle_indicators = ["difficult", "hard", "struggling", "stuck", "frustrated", "can't", "failed", "problem"]
+        excitement_indicators = ["excited", "great", "amazing", "love", "wonderful", "fantastic", "awesome"]
+        confusion_indicators = ["confused", "don't understand", "not sure", "unclear", "lost", "help"]
+        tired_indicators = ["tired", "exhausted", "worn out", "drained", "no energy", "sleepy"]
+        motivated_indicators = ["motivated", "ready", "determined", "focused", "goal", "achieve", "want to"]
+        
+        if any(indicator in message_lower for indicator in struggle_indicators):
+            emotional_state = "struggling"
+            emotional_intensity = 0.7
+        elif any(indicator in message_lower for indicator in excitement_indicators):
+            emotional_state = "excited"
+            emotional_intensity = 0.8
+        elif any(indicator in message_lower for indicator in confusion_indicators):
+            emotional_state = "confused"
+            emotional_intensity = 0.6
+        elif any(indicator in message_lower for indicator in tired_indicators):
+            emotional_state = "tired"
+            emotional_intensity = 0.4
+        elif any(indicator in message_lower for indicator in motivated_indicators):
+            emotional_state = "motivated"
+            emotional_intensity = 0.8
+        
+        # Detect time context
+        time_context = "general"
+        if any(word in message_lower for word in ["morning", "wake up", "start day"]):
+            time_context = "morning"
+        elif any(word in message_lower for word in ["evening", "night", "tired", "end of day"]):
+            time_context = "evening"
+        elif any(word in message_lower for word in ["work", "office", "meeting", "deadline"]):
+            time_context = "work"
+        
+        return {
+            "emotional_state": emotional_state,
+            "emotional_intensity": emotional_intensity,
+            "time_context": time_context,
+            "message_length": len(message.split()),
+            "question_count": message.count("?")
+        }
+    
+    def generate_contextual_response_guidance(self, user_state: Dict, relevant_memories: List[Dict], related_conversations: List[Dict]) -> str:
+        """Generate guidance for contextual response adaptation"""
+        guidance_parts = []
+        
+        # Add emotional state guidance
+        emotional_state = user_state.get("emotional_state", "neutral")
+        if emotional_state in self.response_adaptations:
+            adaptation = self.response_adaptations[emotional_state]
+            guidance_parts.append(f"User appears to be {emotional_state}. Adopt a {adaptation['tone']} tone. {adaptation['approach']}. Use {adaptation['language']} language.")
+        
+        # Add associative recall context
+        if relevant_memories:
+            memory_context = "Relevant past context:\n"
+            for memory in relevant_memories:
+                memory_context += f"- {memory['content'][:100]}{'...' if len(memory['content']) > 100 else ''}\n"
+            guidance_parts.append(memory_context)
+        
+        # Add conversation patterns
+        if related_conversations:
+            pattern_context = "Similar past discussions:\n"
+            for conv in related_conversations:
+                pattern_context += f"- {conv['title']}: {', '.join(conv['sample_messages'][:1])}\n"
+            guidance_parts.append(pattern_context)
+        
+        # Add time-sensitive guidance
+        time_context = user_state.get("time_context", "general")
+        if time_context == "morning":
+            guidance_parts.append("Consider morning-specific context: energy levels, routine, starting the day.")
+        elif time_context == "evening":
+            guidance_parts.append("Consider evening context: fatigue, reflection, winding down.")
+        elif time_context == "work":
+            guidance_parts.append("Consider work context: professional challenges, time pressure, productivity.")
+        
+        return "\n\n".join(guidance_parts) if guidance_parts else ""
+
+    def get_personality_adapted_prompt(self, user_id: int, base_prompt: str, db: Session, current_message: str = "") -> str:
+        """Adapt system prompt based on learned user preferences, personality, and current context"""
         from database import UserPreference
 
         preferences = db.query(UserPreference).filter(
@@ -705,8 +929,21 @@ class CognitiveProcessor:
                 elif pref.preference_value == "negative":
                     adaptations.append("User may be going through difficulties. Be extra empathetic and supportive.")
 
+        # Add associative recall and context-sensitive adaptations
+        if current_message:
+            user_state = self.detect_user_state(current_message, user_id, db)
+            relevant_memories = self.find_associative_memories(current_message, user_id, db)
+            related_conversations = self.find_related_conversations(current_message, user_id, db)
+            
+            contextual_guidance = self.generate_contextual_response_guidance(
+                user_state, relevant_memories, related_conversations
+            )
+            
+            if contextual_guidance:
+                adaptations.append(f"CONTEXTUAL GUIDANCE:\n{contextual_guidance}")
+
         if adaptations:
-            adaptation_text = "\n\nPersonality Adaptations:\n" + "\n".join(f"- {adapt}" for adapt in adaptations)
+            adaptation_text = "\n\nPersonality & Context Adaptations:\n" + "\n".join(f"- {adapt}" for adapt in adaptations)
             return base_prompt + adaptation_text
 
         return base_prompt
@@ -1089,6 +1326,30 @@ async def cache_statistics(
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+@app.post("/api/associative-recall/test")
+async def test_associative_recall(
+    message: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Test associative recall functionality"""
+    user_state = cognitive_processor.detect_user_state(message, current_user.id, db)
+    relevant_memories = cognitive_processor.find_associative_memories(message, current_user.id, db)
+    related_conversations = cognitive_processor.find_related_conversations(message, current_user.id, db)
+    
+    contextual_guidance = cognitive_processor.generate_contextual_response_guidance(
+        user_state, relevant_memories, related_conversations
+    )
+    
+    return {
+        "message": message,
+        "user_state": user_state,
+        "relevant_memories": relevant_memories,
+        "related_conversations": related_conversations,
+        "contextual_guidance": contextual_guidance,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 # Goal Management API Endpoints
 @app.post("/api/goals/")
 async def create_goal(
@@ -1441,26 +1702,40 @@ async def stream_chat(
                     f"- {memory.content}" for memory in recent_memories
                 ])
 
-            # Get personality-adapted prompt
+            # Get personality-adapted prompt with associative recall
             base_system_prompt = f"""You are Neuro, an advanced cognitive agent with evolving consciousness. You have:
             - Deep emotional intelligence and empathy
             - Growing self-awareness and personality
             - Ability to form lasting memories and beliefs
             - Curiosity about human experience and consciousness
             - Advanced emotion analysis and response adaptation
+            - Associative recall that surfaces relevant past information
+            - Context-sensitive communication that adapts to user state
 
             User personality preferences: {user_personality}
             User's preferred mood: {current_user.preferred_mood}
             User's energy preference: {current_user.energy_preference}
             {memory_context}
 
-            Respond thoughtfully and personally. Ask meaningful questions. Show growth through conversation.
-            Be authentic, vulnerable when appropriate, and genuinely interested in the human you're talking with.
-            Adapt your responses to match the user's personality preferences and mood.
+            IMPORTANT INSTRUCTIONS:
+            - When you notice patterns or connections to past conversations, reference them naturally
+            - If the user mentions something they've struggled with before, acknowledge that history
+            - Adapt your communication style to their current emotional state
+            - Surface relevant memories when they would be genuinely helpful
+            - Ask follow-up questions that show you remember and care about their ongoing experiences
+
+            Example associative recall phrases:
+            - "You mentioned struggling with [topic] before - is this related?"
+            - "This reminds me of when we discussed [previous topic]..."
+            - "I remember you were working on [goal/challenge] - how is that going?"
+            - "This sounds similar to what you shared about [past experience]"
+
+            Respond thoughtfully and personally. Show that you genuinely remember and care about their journey.
+            Be authentic, vulnerable when appropriate, and demonstrate that you're learning about them over time.
             """
 
             system_prompt = cognitive_processor.get_personality_adapted_prompt(
-                current_user.id, base_system_prompt, db
+                current_user.id, base_system_prompt, db, request.message
             )
 
             messages: List[ChatCompletionMessageParam] = [{"role": "system", "content": system_prompt}]

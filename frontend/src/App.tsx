@@ -306,6 +306,41 @@ const AppContent: React.FC = () => {
     }));
   };
 
+  // Test associative recall
+  const testAssociativeRecall = async (testMessage: string) => {
+    try {
+      const isLocal = window.location.hostname === 'localhost';
+      const host = window.location.host;
+      const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
+      const protocol = isLocal ? 'http' : 'https';
+      
+      const response = await fetch(`${protocol}://${backendHost}/api/associative-recall/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ message: testMessage })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🧠 Associative Recall Test Result:', result);
+        
+        // Add a test message showing the recall capabilities
+        const testResultMessage: Message = {
+          id: `test_${Date.now()}`,
+          role: 'assistant',
+          content: `🧠 **Associative Recall Test**\n\n**User State Detected:** ${result.user_state.emotional_state} (intensity: ${result.user_state.emotional_intensity})\n\n**Relevant Memories Found:** ${result.relevant_memories.length}\n${result.relevant_memories.map((mem: any) => `- ${mem.content.substring(0, 100)}...`).join('\n')}\n\n**Related Conversations:** ${result.related_conversations.length}\n${result.related_conversations.map((conv: any) => `- ${conv.title}`).join('\n')}\n\n**Contextual Guidance Generated:** ${result.contextual_guidance ? 'Yes' : 'No'}`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, testResultMessage]);
+      }
+    } catch (error) {
+      console.error('Error testing associative recall:', error);
+    }
+  };
+
   // Get mood color based on cognitive state
   const getMoodColor = (mood: string) => {
     switch (mood) {
@@ -493,13 +528,20 @@ const AppContent: React.FC = () => {
                       </span>
                       {message.isStreaming && (
                         <motion.div
-                          className="flex space-x-1"
-                          animate={{ opacity: [0.5, 1, 0.5] }}
-                          transition={{ duration: 1, repeat: Infinity }}
+                          className="flex items-center space-x-2"
                         >
-                          <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                          <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                          <div className="w-1 h-1 bg-blue-400 rounded-full" />
+                          <motion.div
+                            className="flex space-x-1"
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 1, repeat: Infinity }}
+                          >
+                            <div className="w-1 h-1 bg-blue-400 rounded-full" />
+                            <div className="w-1 h-1 bg-blue-400 rounded-full" />
+                            <div className="w-1 h-1 bg-blue-400 rounded-full" />
+                          </motion.div>
+                          <span className="text-xs text-purple-400">
+                            🧠 Recalling context
+                          </span>
                         </motion.div>
                       )}
                     </div>
@@ -597,6 +639,44 @@ const AppContent: React.FC = () => {
             <Activity className="w-5 h-5 text-blue-400" />
             <span>Cognitive State</span>
           </h2>
+
+          {/* Associative Recall Indicator */}
+          <motion.div
+            className="bg-white/10 rounded-xl p-4 mb-6"
+            whileHover={{ scale: 1.02 }}
+          >
+            <h3 className="font-semibold mb-2 flex items-center space-x-2">
+              <Brain className="w-4 h-4 text-purple-400" />
+              <span>Associative Recall</span>
+            </h3>
+            <div className="text-center">
+              <div className="text-sm text-gray-400 mb-2">
+                Surfacing relevant memories
+              </div>
+              <motion.div
+                className="w-full bg-white/20 rounded-full h-2"
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <motion.div
+                  className="bg-gradient-to-r from-purple-400 to-blue-400 h-2 rounded-full"
+                  animate={{ 
+                    x: [-100, 100, -100],
+                    opacity: [0.3, 1, 0.3]
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              </motion.div>
+              <div className="text-xs text-purple-400 mt-2">
+                Context-sensitive responses active
+              </div>
+            </div>
+          </motion.div>
 
           {/* Mood Display */}
           <motion.div
