@@ -21,8 +21,8 @@ const host = window.location.host;
 // For Replit: if we're on a Replit domain, construct the backend URL properly
 const API_BASE = isLocal 
   ? 'localhost:8000' 
-  : host.includes('replit.dev') || host.includes('replit.app')
-    ? '8000-' + host.split('-').slice(1).join('-') // Proper Replit URL construction
+  : host.includes('replit.dev') || host.includes('replit.app') 
+    ? host.replace(/^5000-/, '8000-') // Replace frontend port with backend port for Replit
     : 'localhost:8000';
 const API_PROTOCOL = isLocal ? 'http' : 'https';
 
