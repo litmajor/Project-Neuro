@@ -412,6 +412,41 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Test semantic memory clustering
+  const testSemanticMemory = async (testMessage: string) => {
+    try {
+      const isLocal = window.location.hostname === 'localhost';
+      const host = window.location.host;
+      const backendHost = isLocal ? 'localhost:8000' : '8000-ef06-4315-812e-4f8a24e40d06-00-4d9n4n4rocto.worf.replit.dev';
+      const protocol = isLocal ? 'http' : 'https';
+      
+      const response = await fetch(`${protocol}://${backendHost}/api/semantic-memory/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ message: testMessage })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🧠 Semantic Memory Test Result:', result);
+        
+        // Add a test message showing the semantic memory capabilities
+        const testResultMessage: Message = {
+          id: `semantic_test_${Date.now()}`,
+          role: 'assistant',
+          content: `🧠 **Semantic Memory Clustering Test**\n\n**Extracted Concepts:** ${result.extracted_concepts.length}\n${result.extracted_concepts.map((concept: any) => `- ${concept.category} (strength: ${concept.activation_strength?.toFixed(2)})`).join('\n')}\n\n**Semantic Memories Found:** ${result.relevant_memories.length}\n${result.relevant_memories.map((mem: any) => `- ${mem.category}: ${mem.content.substring(0, 80)}... (semantic: ${mem.semantic_score?.toFixed(2)})`).join('\n')}\n\n**Dormant Concepts Surfaced:** ${result.dormant_concepts.length}\n${result.dormant_concepts.map((dormant: any) => `- ${dormant.concept_category}: ${dormant.reactivation_reason} (${dormant.days_dormant} days old)`).join('\n')}\n\n**Cross-Domain Connections:** ${result.cross_domain_connections.length}\n${result.cross_domain_connections.map((conn: any) => `- ${conn.insight}`).join('\n')}\n\n**Creative Combinations:** ${result.creative_combinations.length}\n${result.creative_combinations.map((combo: any) => `- ${combo.creative_insight}`).join('\n')}`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, testResultMessage]);
+      }
+    } catch (error) {
+      console.error('Error testing semantic memory:', error);
+    }
+  };
+
   // Get mood color based on cognitive state
   const getMoodColor = (mood: string) => {
     switch (mood) {
@@ -735,41 +770,76 @@ const AppContent: React.FC = () => {
             <span>Cognitive State</span>
           </h2>
 
-          {/* Associative Recall Indicator */}
+          {/* Semantic Memory System */}
           <motion.div
             className="bg-white/10 rounded-xl p-4 mb-6"
             whileHover={{ scale: 1.02 }}
           >
             <h3 className="font-semibold mb-2 flex items-center space-x-2">
               <Brain className="w-4 h-4 text-purple-400" />
-              <span>Associative Recall</span>
+              <span>Semantic Memory</span>
             </h3>
-            <div className="text-center">
-              <div className="text-sm text-gray-400 mb-2">
-                Surfacing relevant memories
-              </div>
-              <motion.div
-                className="w-full bg-white/20 rounded-full h-2"
-                initial={{ width: 0 }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
+            <div className="space-y-3">
+              {/* Concept Hierarchies */}
+              <div className="text-center">
+                <div className="text-xs text-gray-400 mb-1">Concept Hierarchies</div>
                 <motion.div
-                  className="bg-gradient-to-r from-purple-400 to-blue-400 h-2 rounded-full"
-                  animate={{ 
-                    x: [-100, 100, -100],
-                    opacity: [0.3, 1, 0.3]
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-              </motion.div>
-              <div className="text-xs text-purple-400 mt-2">
-                Context-sensitive responses active
+                  className="w-full bg-white/20 rounded-full h-2"
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <motion.div
+                    className="bg-gradient-to-r from-purple-400 to-blue-400 h-2 rounded-full"
+                    animate={{ 
+                      x: [-100, 100, -100],
+                      opacity: [0.3, 1, 0.3]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                </motion.div>
+                <div className="text-xs text-purple-400 mt-1">
+                  Mapping abstract relationships
+                </div>
               </div>
+              
+              {/* Cross-Domain Bridges */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">Cross-Domain Bridges</span>
+                <motion.span 
+                  className="text-blue-400"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  🌉 Active
+                </motion.span>
+              </div>
+              
+              {/* Dormant Concept Detection */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">Dormant Concepts</span>
+                <motion.span 
+                  className="text-green-400"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2.5, repeat: Infinity }}
+                >
+                  💡 Surfacing
+                </motion.span>
+              </div>
+              
+              {/* Test Button */}
+              <motion.button
+                className="w-full text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-2 py-1 rounded transition-colors"
+                onClick={() => testSemanticMemory("I'm working on a creative project that combines nature patterns with technology design")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Test Semantic Memory
+              </motion.button>
             </div>
           </motion.div>
 

@@ -982,10 +982,297 @@ class EmotionalTrajectoryTracker:
         
         return list(set(topics_to_avoid))  # Remove duplicates
 
+class ConceptHierarchy:
+    """Manages hierarchical concept relationships and semantic clustering"""
+    
+    def __init__(self):
+        # Abstract concept categories for semantic clustering
+        self.concept_hierarchies = {
+            "creativity": {
+                "parent_concepts": ["innovation", "imagination", "originality"],
+                "child_concepts": ["brainstorming", "ideation", "artistic_expression", "problem_solving"],
+                "related_domains": ["art", "science", "technology", "design"],
+                "principles": ["biomimicry", "synthesis", "divergent_thinking", "iteration"]
+            },
+            "systems_thinking": {
+                "parent_concepts": ["complexity", "emergence", "interconnection"],
+                "child_concepts": ["feedback_loops", "patterns", "structures", "dynamics"],
+                "related_domains": ["biology", "engineering", "ecology", "business"],
+                "principles": ["holism", "non_linearity", "adaptation", "resilience"]
+            },
+            "learning": {
+                "parent_concepts": ["knowledge", "understanding", "growth"],
+                "child_concepts": ["practice", "repetition", "reflection", "application"],
+                "related_domains": ["education", "psychology", "neuroscience", "pedagogy"],
+                "principles": ["spaced_repetition", "active_recall", "metacognition", "transfer"]
+            },
+            "communication": {
+                "parent_concepts": ["connection", "expression", "understanding"],
+                "child_concepts": ["listening", "speaking", "writing", "body_language"],
+                "related_domains": ["linguistics", "psychology", "media", "technology"],
+                "principles": ["clarity", "empathy", "context", "feedback"]
+            },
+            "problem_solving": {
+                "parent_concepts": ["analysis", "synthesis", "evaluation"],
+                "child_concepts": ["decomposition", "pattern_recognition", "hypothesis", "testing"],
+                "related_domains": ["mathematics", "science", "engineering", "philosophy"],
+                "principles": ["first_principles", "analogical_reasoning", "constraint_satisfaction", "optimization"]
+            },
+            "adaptation": {
+                "parent_concepts": ["flexibility", "resilience", "evolution"],
+                "child_concepts": ["adjustment", "learning", "survival", "optimization"],
+                "related_domains": ["biology", "psychology", "business", "technology"],
+                "principles": ["feedback", "variation", "selection", "inheritance"]
+            }
+        }
+        
+        # Semantic similarity clusters for concept grouping
+        self.semantic_clusters = {
+            "biological_systems": ["ecosystem", "organism", "cell", "DNA", "evolution", "adaptation", "symbiosis", "metabolism"],
+            "natural_patterns": ["fibonacci", "fractals", "spirals", "waves", "cycles", "growth", "decay", "emergence"],
+            "design_principles": ["form_follows_function", "minimalism", "modularity", "scalability", "usability", "aesthetics"],
+            "cognitive_processes": ["memory", "attention", "perception", "reasoning", "intuition", "creativity", "consciousness"],
+            "network_effects": ["connections", "nodes", "hubs", "clusters", "viral", "cascade", "emergence", "collective"],
+            "flow_states": ["focus", "immersion", "optimal_experience", "challenge", "skill", "feedback", "clear_goals"],
+            "optimization": ["efficiency", "effectiveness", "minimal", "maximal", "trade_offs", "constraints", "objectives"]
+        }
+        
+        # Cross-domain bridges for unexpected connections
+        self.domain_bridges = {
+            ("biology", "technology"): ["biomimicry", "neural_networks", "genetic_algorithms", "swarm_intelligence"],
+            ("psychology", "design"): ["user_experience", "cognitive_load", "mental_models", "behavioral_economics"],
+            ("physics", "philosophy"): ["emergence", "determinism", "quantum_mechanics", "observer_effect"],
+            ("music", "mathematics"): ["harmony", "rhythm", "patterns", "frequencies", "golden_ratio"],
+            ("nature", "architecture"): ["organic_forms", "structural_efficiency", "environmental_adaptation", "sustainable_design"],
+            ("games", "learning"): ["gamification", "progression", "rewards", "challenge", "engagement", "mastery"]
+        }
+        
+        # Temporal concept activation for surfacing dormant ideas
+        self.concept_activation_history = {}  # Track when concepts were last activated
+        self.concept_relevance_decay = 30  # Days before concepts become "dormant"
+
+    def extract_concepts(self, text: str) -> List[Dict]:
+        """Extract semantic concepts from text using hierarchical analysis"""
+        text_lower = text.lower()
+        extracted_concepts = []
+        
+        # Check for direct concept matches in hierarchies
+        for category, hierarchy in self.concept_hierarchies.items():
+            relevance_score = 0
+            matched_elements = []
+            
+            # Check parent concepts
+            for concept in hierarchy["parent_concepts"]:
+                if any(word in text_lower for word in concept.split("_")):
+                    relevance_score += 3
+                    matched_elements.append(f"parent:{concept}")
+            
+            # Check child concepts
+            for concept in hierarchy["child_concepts"]:
+                if any(word in text_lower for word in concept.split("_")):
+                    relevance_score += 2
+                    matched_elements.append(f"child:{concept}")
+            
+            # Check related domains
+            for domain in hierarchy["related_domains"]:
+                if domain in text_lower:
+                    relevance_score += 1
+                    matched_elements.append(f"domain:{domain}")
+            
+            # Check principles
+            for principle in hierarchy["principles"]:
+                if any(word in text_lower for word in principle.split("_")):
+                    relevance_score += 2
+                    matched_elements.append(f"principle:{principle}")
+            
+            if relevance_score > 0:
+                extracted_concepts.append({
+                    "category": category,
+                    "relevance_score": relevance_score,
+                    "matched_elements": matched_elements,
+                    "activation_strength": min(1.0, relevance_score / 5)
+                })
+        
+        # Check semantic clusters
+        for cluster_name, concepts in self.semantic_clusters.items():
+            cluster_score = 0
+            matched_concepts = []
+            
+            for concept in concepts:
+                if any(word in text_lower for word in concept.split("_")):
+                    cluster_score += 1
+                    matched_concepts.append(concept)
+            
+            if cluster_score > 0:
+                extracted_concepts.append({
+                    "category": f"cluster:{cluster_name}",
+                    "relevance_score": cluster_score,
+                    "matched_elements": matched_concepts,
+                    "activation_strength": min(1.0, cluster_score / 3)
+                })
+        
+        return extracted_concepts
+
+    def find_cross_domain_connections(self, current_concepts: List[str], memory_concepts: List[str]) -> List[Dict]:
+        """Find unexpected connections across different domains"""
+        connections = []
+        
+        # Check for domain bridges
+        for (domain1, domain2), bridge_concepts in self.domain_bridges.items():
+            current_in_domain1 = any(d1_word in " ".join(current_concepts).lower() for d1_word in domain1.split("_"))
+            memory_in_domain2 = any(d2_word in " ".join(memory_concepts).lower() for d2_word in domain2.split("_"))
+            
+            if current_in_domain1 and memory_in_domain2:
+                # Find applicable bridge concepts
+                applicable_bridges = []
+                combined_concepts = current_concepts + memory_concepts
+                
+                for bridge in bridge_concepts:
+                    bridge_words = bridge.split("_")
+                    if any(word in " ".join(combined_concepts).lower() for word in bridge_words):
+                        applicable_bridges.append(bridge)
+                
+                if applicable_bridges:
+                    connections.append({
+                        "type": "cross_domain_bridge",
+                        "domains": (domain1, domain2),
+                        "bridge_concepts": applicable_bridges,
+                        "connection_strength": len(applicable_bridges) / len(bridge_concepts),
+                        "insight": f"Connection between {domain1} and {domain2} through {', '.join(applicable_bridges)}"
+                    })
+        
+        return connections
+
+    def surface_dormant_concepts(self, current_concepts: List[str], user_id: int, db: Session) -> List[Dict]:
+        """Surface dormant concepts that become relevant to current context"""
+        from database import Memory
+        
+        dormant_concepts = []
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=self.concept_relevance_decay)
+        
+        # Get old memories that haven't been accessed recently
+        old_memories = db.query(Memory).filter(
+            Memory.user_id == user_id,
+            Memory.last_accessed < cutoff_date,
+            Memory.importance_score > 0.4
+        ).order_by(Memory.created_at.asc()).limit(20).all()
+        
+        for memory in old_memories:
+            memory_concepts = self.extract_concepts(memory.content)
+            
+            if memory_concepts:
+                # Check for semantic similarity with current concepts
+                for mem_concept in memory_concepts:
+                    for curr_concept in current_concepts:
+                        # Find semantic overlaps
+                        similarity_score = self._calculate_semantic_similarity(
+                            mem_concept.get("category", ""), curr_concept
+                        )
+                        
+                        if similarity_score > 0.3:  # Threshold for relevance
+                            days_dormant = (datetime.now(timezone.utc) - memory.last_accessed).days
+                            
+                            dormant_concepts.append({
+                                "memory_id": memory.id,
+                                "memory_content": memory.content[:200],
+                                "concept_category": mem_concept.get("category"),
+                                "similarity_score": similarity_score,
+                                "days_dormant": days_dormant,
+                                "reactivation_reason": f"Connects to current {curr_concept} through {mem_concept.get('category')}",
+                                "creative_potential": similarity_score * (1 + days_dormant / 100)  # Older = more creative potential
+                            })
+        
+        # Sort by creative potential and return top 5
+        dormant_concepts.sort(key=lambda x: x["creative_potential"], reverse=True)
+        return dormant_concepts[:5]
+
+    def _calculate_semantic_similarity(self, concept1: str, concept2: str) -> float:
+        """Calculate semantic similarity between concepts"""
+        # Check if concepts are in the same hierarchy
+        for category, hierarchy in self.concept_hierarchies.items():
+            all_concepts = (hierarchy["parent_concepts"] + hierarchy["child_concepts"] + 
+                          hierarchy["related_domains"] + hierarchy["principles"])
+            
+            if concept1 in all_concepts or concept2 in all_concepts:
+                if concept1 == concept2:
+                    return 1.0
+                elif concept1 in all_concepts and concept2 in all_concepts:
+                    return 0.8
+                else:
+                    return 0.4
+        
+        # Check semantic clusters
+        for cluster_concepts in self.semantic_clusters.values():
+            if concept1 in cluster_concepts and concept2 in cluster_concepts:
+                return 0.7
+        
+        # Basic word overlap
+        words1 = set(concept1.lower().split("_"))
+        words2 = set(concept2.lower().split("_"))
+        if words1.intersection(words2):
+            return 0.3
+        
+        return 0.0
+
+    def generate_creative_combinations(self, active_concepts: List[Dict], dormant_concepts: List[Dict]) -> List[Dict]:
+        """Generate novel creative combinations from active and dormant concepts"""
+        combinations = []
+        
+        for active in active_concepts:
+            for dormant in dormant_concepts:
+                # Look for unexpected combinations with high creative potential
+                combination_strength = (active.get("activation_strength", 0) + 
+                                      dormant.get("creative_potential", 0)) / 2
+                
+                if combination_strength > 0.5:
+                    combinations.append({
+                        "active_concept": active.get("category"),
+                        "dormant_concept": dormant.get("concept_category"),
+                        "combination_strength": combination_strength,
+                        "creative_insight": self._generate_creative_insight(active, dormant),
+                        "application_domains": self._suggest_application_domains(active, dormant)
+                    })
+        
+        return sorted(combinations, key=lambda x: x["combination_strength"], reverse=True)[:3]
+
+    def _generate_creative_insight(self, active_concept: Dict, dormant_concept: Dict) -> str:
+        """Generate creative insight from concept combination"""
+        insights = [
+            f"What if we applied {dormant_concept.get('concept_category', 'past insights')} to {active_concept.get('category', 'current context')}?",
+            f"The principles from {dormant_concept.get('concept_category', 'previous work')} might unlock new approaches to {active_concept.get('category', 'this challenge')}",
+            f"Consider how {dormant_concept.get('concept_category', 'that old idea')} could transform your thinking about {active_concept.get('category', 'current focus')}",
+            f"There's an unexplored connection between {active_concept.get('category', 'what you're working on')} and {dormant_concept.get('concept_category', 'past discoveries')}"
+        ]
+        return insights[hash(str(active_concept) + str(dormant_concept)) % len(insights)]
+
+    def _suggest_application_domains(self, active_concept: Dict, dormant_concept: Dict) -> List[str]:
+        """Suggest domains where concept combination could be applied"""
+        # Extract domains from both concepts
+        active_category = active_concept.get("category", "")
+        dormant_category = dormant_concept.get("concept_category", "")
+        
+        domains = []
+        
+        # Get domains from hierarchies
+        for category, hierarchy in self.concept_hierarchies.items():
+            if category in active_category or category in dormant_category:
+                domains.extend(hierarchy["related_domains"])
+        
+        # Add cross-domain applications
+        if len(domains) >= 2:
+            for (d1, d2), bridges in self.domain_bridges.items():
+                if d1 in domains or d2 in domains:
+                    domains.extend([d1, d2])
+        
+        return list(set(domains))[:4]
+
 class CognitiveProcessor:
     """Advanced cognitive processing for the AI agent"""
 
     def __init__(self):
+        # Initialize concept hierarchy system
+        self.concept_hierarchy = ConceptHierarchy()
+        
         # Enhanced associative recall patterns
         self.recall_triggers = {
             "routine": ["morning", "wake up", "get up", "start day", "breakfast", "coffee", "schedule"],
@@ -1419,50 +1706,93 @@ class CognitiveProcessor:
         db.commit()
 
     def find_associative_memories(self, current_message: str, user_id: int, db: Session) -> List[Dict]:
-        """Find relevant memories through associative recall"""
+        """Find relevant memories through associative recall and semantic clustering"""
         from database import Memory, Message, Conversation
         
         current_lower = current_message.lower()
         relevant_memories = []
         
-        # Find triggered recall categories
+        # Extract concepts from current message using hierarchy system
+        current_concepts = self.concept_hierarchy.extract_concepts(current_message)
+        current_concept_names = [c.get("category", "") for c in current_concepts]
+        
+        # Find triggered recall categories (traditional method)
         triggered_categories = []
         for category, keywords in self.recall_triggers.items():
             if any(keyword in current_lower for keyword in keywords):
                 triggered_categories.append(category)
         
-        if not triggered_categories:
-            return []
-        
-        # Search memories for relevant content
+        # Search memories for both traditional and semantic relevance
         memories = db.query(Memory).filter(
             Memory.user_id == user_id,
             Memory.importance_score > 0.3
-        ).order_by(Memory.importance_score.desc()).limit(20).all()
+        ).order_by(Memory.importance_score.desc()).limit(30).all()
         
         for memory in memories:
             memory_content = memory.content.lower()
             relevance_score = 0
+            semantic_score = 0
             
-            # Check if memory contains relevant keywords
+            # Traditional keyword matching
             for category in triggered_categories:
                 category_keywords = self.recall_triggers[category]
                 matches = sum(1 for keyword in category_keywords if keyword in memory_content)
                 if matches > 0:
                     relevance_score += matches / len(category_keywords)
             
-            if relevance_score > 0.2:  # Threshold for relevance
+            # Semantic concept matching
+            memory_concepts = self.concept_hierarchy.extract_concepts(memory.content)
+            memory_concept_names = [c.get("category", "") for c in memory_concepts]
+            
+            # Calculate semantic similarity
+            for current_concept in current_concept_names:
+                for memory_concept in memory_concept_names:
+                    similarity = self.concept_hierarchy._calculate_semantic_similarity(current_concept, memory_concept)
+                    semantic_score += similarity
+            
+            # Normalize semantic score
+            if memory_concepts and current_concepts:
+                semantic_score = semantic_score / (len(memory_concepts) * len(current_concepts))
+            
+            # Combined relevance score
+            combined_score = relevance_score * 0.6 + semantic_score * 0.4
+            
+            if combined_score > 0.15:  # Lower threshold to catch semantic matches
                 relevant_memories.append({
                     "content": memory.content,
                     "category": memory.category,
                     "relevance_score": relevance_score,
+                    "semantic_score": semantic_score,
+                    "combined_score": combined_score,
                     "created_at": memory.created_at,
-                    "importance": memory.importance_score
+                    "importance": memory.importance_score,
+                    "memory_concepts": memory_concept_names,
+                    "concept_overlap": len(set(current_concept_names).intersection(set(memory_concept_names)))
                 })
         
-        # Sort by relevance and return top 3
-        relevant_memories.sort(key=lambda x: x["relevance_score"] * x["importance"], reverse=True)
-        return relevant_memories[:3]
+        # Surface dormant concepts
+        dormant_concepts = self.concept_hierarchy.surface_dormant_concepts(
+            current_concept_names, user_id, db
+        )
+        
+        # Add dormant concepts as special memory entries
+        for dormant in dormant_concepts:
+            relevant_memories.append({
+                "content": f"💡 DORMANT INSIGHT: {dormant['memory_content']}",
+                "category": "dormant_concept",
+                "relevance_score": 0,
+                "semantic_score": dormant["similarity_score"],
+                "combined_score": dormant["creative_potential"],
+                "created_at": datetime.now(timezone.utc) - timedelta(days=dormant["days_dormant"]),
+                "importance": dormant["creative_potential"],
+                "memory_concepts": [dormant["concept_category"]],
+                "concept_overlap": 1,
+                "dormant_info": dormant
+            })
+        
+        # Sort by combined relevance and return top 5
+        relevant_memories.sort(key=lambda x: x["combined_score"] * x["importance"], reverse=True)
+        return relevant_memories[:5]
     
     def find_related_conversations(self, current_message: str, user_id: int, db: Session) -> List[Dict]:
         """Find past conversations with similar themes"""
@@ -1564,8 +1894,8 @@ class CognitiveProcessor:
             "question_count": message.count("?")
         }
     
-    def generate_contextual_response_guidance(self, user_state: Dict, relevant_memories: List[Dict], related_conversations: List[Dict]) -> str:
-        """Generate guidance for contextual response adaptation"""
+    def generate_contextual_response_guidance(self, user_state: Dict, relevant_memories: List[Dict], related_conversations: List[Dict], current_message: str = "") -> str:
+        """Generate guidance for contextual response adaptation with semantic insights"""
         guidance_parts = []
         
         # Add emotional state guidance
@@ -1574,12 +1904,66 @@ class CognitiveProcessor:
             adaptation = self.response_adaptations[emotional_state]
             guidance_parts.append(f"User appears to be {emotional_state}. Adopt a {adaptation['tone']} tone. {adaptation['approach']}. Use {adaptation['language']} language.")
         
-        # Add associative recall context
+        # Extract current concepts for semantic analysis
+        if current_message:
+            current_concepts = self.concept_hierarchy.extract_concepts(current_message)
+            
+            if current_concepts:
+                concept_guidance = "ACTIVE CONCEPTS:\n"
+                for concept in current_concepts[:3]:  # Top 3 concepts
+                    concept_guidance += f"- {concept['category']} (strength: {concept['activation_strength']:.2f})\n"
+                guidance_parts.append(concept_guidance)
+        
+        # Add semantic memory analysis
         if relevant_memories:
-            memory_context = "Relevant past context:\n"
+            memory_context = "SEMANTIC MEMORY ANALYSIS:\n"
+            dormant_insights = []
+            regular_memories = []
+            
             for memory in relevant_memories:
-                memory_context += f"- {memory['content'][:100]}{'...' if len(memory['content']) > 100 else ''}\n"
+                if memory.get('category') == 'dormant_concept':
+                    dormant_insights.append(memory)
+                else:
+                    regular_memories.append(memory)
+            
+            # Regular memories with semantic scores
+            if regular_memories:
+                memory_context += "Relevant memories:\n"
+                for memory in regular_memories[:3]:
+                    semantic_indicator = "🧠" if memory.get('semantic_score', 0) > 0.3 else "📝"
+                    concepts = ", ".join(memory.get('memory_concepts', [])[:2])
+                    memory_context += f"{semantic_indicator} {memory['content'][:80]}{'...' if len(memory['content']) > 80 else ''}"
+                    if concepts:
+                        memory_context += f" [Concepts: {concepts}]"
+                    memory_context += "\n"
+            
+            # Dormant insights
+            if dormant_insights:
+                memory_context += "\n💡 DORMANT INSIGHTS (Creative potential):\n"
+                for insight in dormant_insights[:2]:
+                    dormant_info = insight.get('dormant_info', {})
+                    memory_context += f"- {dormant_info.get('reactivation_reason', 'Unexpected connection')}\n"
+                    memory_context += f"  Memory: {insight['content'][20:100]}{'...' if len(insight['content']) > 100 else ''}\n"
+            
             guidance_parts.append(memory_context)
+        
+        # Add cross-domain connections if available
+        if current_message and relevant_memories:
+            current_concept_names = [c.get("category", "") for c in self.concept_hierarchy.extract_concepts(current_message)]
+            memory_concept_names = []
+            for memory in relevant_memories:
+                memory_concept_names.extend(memory.get('memory_concepts', []))
+            
+            cross_domain_connections = self.concept_hierarchy.find_cross_domain_connections(
+                current_concept_names, memory_concept_names
+            )
+            
+            if cross_domain_connections:
+                connection_guidance = "🌉 CROSS-DOMAIN BRIDGES:\n"
+                for connection in cross_domain_connections[:2]:
+                    connection_guidance += f"- {connection['insight']}\n"
+                    connection_guidance += f"  Bridge concepts: {', '.join(connection['bridge_concepts'])}\n"
+                guidance_parts.append(connection_guidance)
         
         # Add conversation patterns
         if related_conversations:
@@ -1633,11 +2017,30 @@ class CognitiveProcessor:
             related_conversations = self.find_related_conversations(current_message, user_id, db)
             
             contextual_guidance = self.generate_contextual_response_guidance(
-                user_state, relevant_memories, related_conversations
+                user_state, relevant_memories, related_conversations, current_message
             )
             
             if contextual_guidance:
                 adaptations.append(f"CONTEXTUAL GUIDANCE:\n{contextual_guidance}")
+            
+            # Add creative combination insights
+            current_concepts = self.concept_hierarchy.extract_concepts(current_message)
+            dormant_concepts = self.concept_hierarchy.surface_dormant_concepts(
+                [c.get("category", "") for c in current_concepts], user_id, db
+            )
+            
+            if current_concepts and dormant_concepts:
+                creative_combinations = self.concept_hierarchy.generate_creative_combinations(
+                    current_concepts, dormant_concepts
+                )
+                
+                if creative_combinations:
+                    creativity_guidance = "🎨 CREATIVE SYNTHESIS OPPORTUNITIES:\n"
+                    for combo in creative_combinations[:2]:
+                        creativity_guidance += f"- {combo['creative_insight']}\n"
+                        if combo['application_domains']:
+                            creativity_guidance += f"  Applications: {', '.join(combo['application_domains'][:3])}\n"
+                    adaptations.append(creativity_guidance)
 
         if adaptations:
             adaptation_text = "\n\nPersonality & Context Adaptations:\n" + "\n".join(f"- {adapt}" for adapt in adaptations)
@@ -2544,6 +2947,54 @@ async def test_contradiction_detection(
         "contradictions": contradictions,
         "cognitive_distortions": distortions,
         "growth_patterns": growth_patterns,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/semantic-memory/test")
+async def test_semantic_memory_clustering(
+    message: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Test semantic memory clustering and concept hierarchy functionality"""
+    # Extract concepts from current message
+    current_concepts = cognitive_processor.concept_hierarchy.extract_concepts(message)
+    current_concept_names = [c.get("category", "") for c in current_concepts]
+    
+    # Find associative memories with semantic clustering
+    relevant_memories = cognitive_processor.find_associative_memories(message, current_user.id, db)
+    
+    # Surface dormant concepts
+    dormant_concepts = cognitive_processor.concept_hierarchy.surface_dormant_concepts(
+        current_concept_names, current_user.id, db
+    )
+    
+    # Find cross-domain connections
+    memory_concept_names = []
+    for memory in relevant_memories:
+        memory_concept_names.extend(memory.get('memory_concepts', []))
+    
+    cross_domain_connections = cognitive_processor.concept_hierarchy.find_cross_domain_connections(
+        current_concept_names, memory_concept_names
+    )
+    
+    # Generate creative combinations
+    creative_combinations = cognitive_processor.concept_hierarchy.generate_creative_combinations(
+        current_concepts, dormant_concepts
+    )
+    
+    return {
+        "message": message,
+        "extracted_concepts": current_concepts,
+        "relevant_memories": relevant_memories,
+        "dormant_concepts": dormant_concepts,
+        "cross_domain_connections": cross_domain_connections,
+        "creative_combinations": creative_combinations,
+        "semantic_analysis": {
+            "total_concept_categories": len(cognitive_processor.concept_hierarchy.concept_hierarchies),
+            "semantic_clusters": len(cognitive_processor.concept_hierarchy.semantic_clusters),
+            "domain_bridges": len(cognitive_processor.concept_hierarchy.domain_bridges)
+        },
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
